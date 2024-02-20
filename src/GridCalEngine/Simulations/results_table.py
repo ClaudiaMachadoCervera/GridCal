@@ -92,12 +92,17 @@ class ResultsTable:
 
         # list of devices that match the columns or rows for filtering
         self._devices = list()
+        self._devices_per_column: bool = False
 
     def set_devices(self, devices_list: List[ALL_DEV_TYPES]):
         """
         Set the list of devices that matches the results for filtering
         :param devices_list:
         """
+        l = len(devices_list)
+        assert l == self.c or l == self.r
+
+        self._devices_per_column = l == self.c
         self._devices = devices_list
 
     def transpose(self):
@@ -190,7 +195,7 @@ class ResultsTable:
         else:
             return None
 
-    def search_in_rows(self, txt):
+    def search_in_rows(self, txt: str):
         """
         Search stuff
         :param txt:
