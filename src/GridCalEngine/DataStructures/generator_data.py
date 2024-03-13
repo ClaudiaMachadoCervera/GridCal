@@ -37,6 +37,7 @@ class GeneratorData:
         self.idtag: StrVec = np.empty(nelm, dtype=object)
 
         self.controllable: BoolVec = np.zeros(nelm, dtype=bool)
+        self.ctrl_bus: IntVec = np.zeros(self.nelm, dtype=int)  # indices of the control bus
         self.installed_p: Vec = np.zeros(nelm, dtype=float)
 
         self.active: BoolVec = np.zeros(nelm, dtype=bool)
@@ -132,6 +133,11 @@ class GeneratorData:
 
         data.original_idx = elm_idx
 
+        data.ctrl_bus = self.ctrl_bus[elm_idx]
+        bus_map = {o: i for i, o in enumerate(bus_idx)}
+        for k in range(data.nelm):
+            if data.controllable[k]:
+                data.ctrl_bus[k] = bus_map[data.ctrl_bus[k]]
         return data
 
     def size(self) -> int:
@@ -155,6 +161,7 @@ class GeneratorData:
 
         data.controllable = self.controllable.copy()
         data.installed_p = self.installed_p.copy()
+        data.ctrl_bus = self.ctrl_bus.copy()
 
         data.active = self.active.copy()
         data.p = self.p.copy()

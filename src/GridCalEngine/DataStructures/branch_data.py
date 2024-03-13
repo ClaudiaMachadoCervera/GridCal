@@ -50,8 +50,11 @@ class BranchData:
         self.F: IntVec = np.zeros(self.nelm, dtype=int)  # indices of the "from" buses
         self.T: IntVec = np.zeros(self.nelm, dtype=int)  # indices of the "to" buses
 
-        self.ctrl_bus1: IntVec = np.zeros(self.nelm, dtype=int)  # indices of the control buses1
-        self.ctrl_bus2: IntVec = np.zeros(self.nelm, dtype=int)  # indices of the control buses2
+        self.ctrl_bus: IntVec = np.zeros(self.nelm, dtype=int)  # indices of the control bus
+        self.ctrl_branch: IntVec = np.zeros(self.nelm, dtype=int)  # indices of the control branch
+        self.ctrl_mode_m: IntVec = np.zeros(self.nelm, dtype=int)  # indices of the control tap module
+        self.ctrl_mode_tau: IntVec = np.zeros(self.nelm, dtype=int)  # indices of the control tap angle
+
 
         # reliabilty
         self.mttf: Vec = np.zeros(self.nelm, dtype=float)
@@ -198,13 +201,15 @@ class BranchData:
         # first slice, then remap
         data.F = self.F[elm_idx]
         data.T = self.T[elm_idx]
-        data.ctrl_bus1 = self.ctrl_bus1[elm_idx]
-        data.ctrl_bus2 = self.ctrl_bus2[elm_idx]
+        data.ctrl_bus = self.ctrl_bus[elm_idx]
+        data.ctrl_branch = self.ctrl_branch[elm_idx]
+        data.ctrl_mode_m = self.ctrl_mode_m[elm_idx]
+        data.ctrl_mode_tau = self.ctrl_mode_tau[elm_idx]
         bus_map = {o: i for i, o in enumerate(bus_idx)}
         for k in range(data.nelm):
             if data.control_mode[k] != TransformerControlType.fixed:
-                data.ctrl_bus1[k] = bus_map[data.ctrl_bus1[k]]
-                data.ctrl_bus2[k] = bus_map[data.ctrl_bus2[k]]
+                data.ctrl_bus[k] = bus_map[data.ctrl_bus[k]]
+                data.ctrl_branch[k] = bus_map[data.ctrl_branch[k]]
             data.F[k] = bus_map[data.F[k]]
             data.T[k] = bus_map[data.T[k]]
 
@@ -277,6 +282,11 @@ class BranchData:
         data.Qtset = self.Qtset.copy()
         data.vf_set = self.vf_set.copy()
         data.vt_set = self.vt_set.copy()
+
+        data.ctrl_bus = self.ctrl_bus.copy()
+        data.ctrl_branch = self.ctrl_branch.copy()
+        data.ctrl_mode_m = self.ctrl_mode_m.copy()
+        data.ctrl_mode_tau = self.ctrl_mode_tau.copy()
 
         data.C_branch_bus_f = self.C_branch_bus_f.copy()
         data.C_branch_bus_t = self.C_branch_bus_t.copy()

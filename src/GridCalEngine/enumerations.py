@@ -27,6 +27,7 @@ class BusMode(Enum):
     Slack = 3  # Contol Vm, Va (slack)
     PQV = 4  # control P, Q and Vm
     D = 5  # only control the voltage angle (Va)
+    PVR = 6  # remote pv bus
 
     def __str__(self):
         return self.value

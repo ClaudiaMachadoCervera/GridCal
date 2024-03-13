@@ -367,6 +367,8 @@ def get_generator_data(circuit: MultiCircuit,
             else:
                 data.p[k] = elm.P_prof[t_idx]
 
+            data.ctrl_bus[k] = bus_dict.get(elm.control_bus_prof[t_idx], i)
+
             data.active[k] = elm.active_prof[t_idx]
             data.pf[k] = elm.Pf_prof[t_idx]
             data.v[k] = elm.Vset_prof[t_idx]
@@ -381,21 +383,25 @@ def get_generator_data(circuit: MultiCircuit,
                     bus_data.srap_availbale_power[i] += data.p[k]
 
                 if elm.is_controlled:
-
-                    if bus_data.bus_types[i] != 3:  # if it is not Slack
-                        bus_data.bus_types[i] = 2  # set as PV
+                    ctrl_bus_idx = data.ctrl_bus[k]
+                    if bus_data.bus_types[ctrl_bus_idx] != BusMode.Slack.value:  # if it is not Slack
+                        bus_data.bus_types[
+                            ctrl_bus_idx] = BusMode.PV.value if ctrl_bus_idx == i else BusMode.PVR.value  # set as PV
 
                         if not use_stored_guess:
-                            if Vbus[i].real == 1.0:
-                                Vbus[i] = complex(elm.Vset_prof[t_idx], 0)
-                            elif elm.Vset_prof[t_idx] != Vbus[i]:
-                                logger.add_error('Different set points', elm.bus.name, elm.Vset_prof[t_idx], Vbus[i])
+                            if Vbus[ctrl_bus_idx].real == 1.0:
+                                Vbus[ctrl_bus_idx] = complex(elm.Vset_prof[t_idx], 0)
+                            elif elm.Vset_prof[t_idx] != Vbus[ctrl_bus_idx]:
+                                logger.add_error('Different set points', elm.bus.name, elm.Vset_prof[t_idx],
+                                                 Vbus[ctrl_bus_idx])
 
         else:
             if opf_results is not None:
                 data.p[k] = opf_results.generator_power[k] - opf_results.generator_shedding[k]
             else:
                 data.p[k] = elm.P
+
+            data.ctrl_bus[k] = bus_dict.get(elm.regulation_bus, i)
 
             data.active[k] = elm.active
             data.pf[k] = elm.Pf
@@ -411,14 +417,16 @@ def get_generator_data(circuit: MultiCircuit,
                     bus_data.srap_availbale_power[i] += data.p[k]
 
                 if elm.is_controlled:
-                    if bus_data.bus_types[i] != 3:  # if it is not Slack
-                        bus_data.bus_types[i] = 2  # set as PV
+                    ctrl_bus_idx = data.ctrl_bus[k]
+                    if bus_data.bus_types[ctrl_bus_idx] != BusMode.Slack.value:  # if it is not Slack
+                        bus_data.bus_types[
+                            ctrl_bus_idx] = BusMode.PV.value if ctrl_bus_idx == i else BusMode.PVR.value  # set as PV
 
                     if not use_stored_guess:
-                        if Vbus[i].real == 1.0:
-                            Vbus[i] = complex(elm.Vset, 0)
-                        elif elm.Vset != Vbus[i]:
-                            logger.add_error('Different set points', elm.bus.name, elm.Vset, Vbus[i])
+                        if Vbus[ctrl_bus_idx].real == 1.0:
+                            Vbus[ctrl_bus_idx] = complex(elm.Vset, 0)
+                        elif elm.Vset != Vbus[ctrl_bus_idx]:
+                            logger.add_error('Different set points', elm.bus.name, elm.Vset, Vbus[ctrl_bus_idx])
 
         # reactive power limits, for the given power value
         if elm.use_reactive_power_curve:
@@ -506,6 +514,8 @@ def get_battery_data(circuit: MultiCircuit,
             else:
                 data.p[k] = elm.P_prof[t_idx]
 
+            data.ctrl_bus[k] = bus_dict.get(elm.control_bus_prof[t_idx], i)
+
             data.active[k] = elm.active_prof[t_idx]
             data.pf[k] = elm.Pf_prof[t_idx]
             data.v[k] = elm.Vset_prof[t_idx]
@@ -520,20 +530,25 @@ def get_battery_data(circuit: MultiCircuit,
                     bus_data.srap_availbale_power[i] += data.p[k]
 
                 if elm.is_controlled:
-                    if bus_data.bus_types[i] != 3:  # if it is not Slack
-                        bus_data.bus_types[i] = 2  # set as PV
+                    ctrl_bus_idx = data.ctrl_bus[k]
+                    if bus_data.bus_types[ctrl_bus_idx] != BusMode.Slack.value:  # if it is not Slack
+                        bus_data.bus_types[
+                            ctrl_bus_idx] = BusMode.PV.value if ctrl_bus_idx == i else BusMode.PVR.value  # set as PV
 
                         if not use_stored_guess:
-                            if Vbus[i].real == 1.0:
-                                Vbus[i] = complex(elm.Vset_prof[t_idx], 0)
-                            elif elm.Vset_prof[t_idx] != Vbus[i]:
-                                logger.add_error('Different set points', elm.bus.name, elm.Vset_prof[t_idx], Vbus[i])
+                            if Vbus[ctrl_bus_idx].real == 1.0:
+                                Vbus[ctrl_bus_idx] = complex(elm.Vset_prof[t_idx], 0)
+                            elif elm.Vset_prof[t_idx] != Vbus[ctrl_bus_idx]:
+                                logger.add_error('Different set points', elm.bus.name, elm.Vset_prof[t_idx],
+                                                 Vbus[ctrl_bus_idx])
 
         else:
             if opf_results is not None:
                 data.p[k] = opf_results.battery_power[k]
             else:
                 data.p[k] = elm.P
+
+            data.ctrl_bus[k] = bus_dict.get(elm.regulation_bus, i)
 
             data.active[k] = elm.active
             data.pf[k] = elm.Pf
@@ -549,14 +564,16 @@ def get_battery_data(circuit: MultiCircuit,
                     bus_data.srap_availbale_power[i] += data.p[k]
 
                 if elm.is_controlled:
-                    if bus_data.bus_types[i] != 3:  # if it is not Slack
-                        bus_data.bus_types[i] = 2  # set as PV
+                    ctrl_bus_idx = data.ctrl_bus[k]
+                    if bus_data.bus_types[ctrl_bus_idx] != BusMode.Slack.value:  # if it is not Slack
+                        bus_data.bus_types[
+                            ctrl_bus_idx] = BusMode.PV.value if ctrl_bus_idx == i else BusMode.PVR.value  # set as PV
 
                     if not use_stored_guess:
-                        if Vbus[i].real == 1.0:
-                            Vbus[i] = complex(elm.Vset, 0)
-                        elif elm.Vset != Vbus[i]:
-                            logger.add_error('Different set points', elm.bus.name, elm.Vset, Vbus[i])
+                        if Vbus[ctrl_bus_idx].real == 1.0:
+                            Vbus[ctrl_bus_idx] = complex(elm.Vset, 0)
+                        elif elm.Vset != Vbus[ctrl_bus_idx]:
+                            logger.add_error('Different set points', elm.bus.name, elm.Vset, Vbus[ctrl_bus_idx])
 
         # reactive power limits, for the given power value
         if elm.use_reactive_power_curve:
@@ -788,6 +805,10 @@ def get_branch_data(circuit: MultiCircuit,
 
         data.control_mode[ii] = elm.control_mode
         data.virtual_tap_f[ii], data.virtual_tap_t[ii] = elm.get_virtual_taps()
+        data.ctrl_bus[ii] = bus_dict.get(elm.regulation_bus, -1)
+        data.ctrl_branch[ii] = ii  # This branch
+        data.ctrl_mode_m[ii] = elm.tap_module_control_mode
+        data.ctrl_mode_tau[ii] = elm.tap_angle_control_mode
 
         data.contingency_enabled[ii] = int(elm.contingency_enabled)
         data.monitor_loading[ii] = int(elm.monitor_loading)

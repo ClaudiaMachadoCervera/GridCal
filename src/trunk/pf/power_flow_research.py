@@ -185,6 +185,9 @@ def run_pf(grid: gce.MultiCircuit, pf_options: gce.PowerFlowOptions):
     """
     nc = gce.compile_numerical_circuit_at(grid, t_idx=None)
 
+    indices = nc.get_simulation_indices()
+    adm = nc.get_admittance_matrices()
+
     Ybus = nc.Ybus
     pq = nc.pq
     pvpq = np.r_[nc.pv, nc.pq]
@@ -249,7 +252,8 @@ if __name__ == '__main__':
 
     # grid_ = linn5bus_example()
 
-    fname = os.path.join('..', '..', '..', 'Grids_and_profiles', 'grids', '2869 Pegase.gridcal')
+    # fname = os.path.join('..', '..', '..', 'Grids_and_profiles', 'grids', '2869 Pegase.gridcal')
+    fname = os.path.join('..', '..', '..', 'Grids_and_profiles', 'grids', '5n2g.RAW')
     # fname = os.path.join('..', '..', '..', 'Grids_and_profiles', 'grids', '1951 Bus RTE.xlsx')
     # fname = os.path.join('..', '..', '..', 'Grids_and_profiles', 'grids', "GB Network.gridcal")
     # fname = os.path.join('..', '..', '..', 'Grids_and_profiles', 'grids', "Iwamoto's 11 Bus.xlsx")
