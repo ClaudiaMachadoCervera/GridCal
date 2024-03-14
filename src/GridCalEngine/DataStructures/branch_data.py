@@ -52,8 +52,8 @@ class BranchData:
 
         self.ctrl_bus: IntVec = np.zeros(self.nelm, dtype=int)  # indices of the control bus
         self.ctrl_branch: IntVec = np.zeros(self.nelm, dtype=int)  # indices of the control branch
-        self.ctrl_mode_m: IntVec = np.zeros(self.nelm, dtype=int)  # indices of the control tap module
-        self.ctrl_mode_tau: IntVec = np.zeros(self.nelm, dtype=int)  # indices of the control tap angle
+        self.ctrl_mode_m: ObjVec = np.zeros(self.nelm, dtype=object)  # indices of the control tap module
+        self.ctrl_mode_tau: ObjVec = np.zeros(self.nelm, dtype=object)  # indices of the control tap angle
 
 
         # reliabilty

@@ -188,6 +188,9 @@ def run_pf(grid: gce.MultiCircuit, pf_options: gce.PowerFlowOptions):
     indices = nc.get_simulation_indices()
     adm = nc.get_admittance_matrices()
 
+    # TODO: Comentar con José Luis para el caso de los controlable shunt (reactancias): 1º actualizar Qmax,
+    # Qmin en base a V de cada iteración y chequear límites
+
     Ybus = nc.Ybus
     pq = nc.pq
     pvpq = np.r_[nc.pv, nc.pq]
