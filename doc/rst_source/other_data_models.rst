@@ -3987,12 +3987,12 @@ RawInductionMachine
     ID             str                One or  two character ID                                                                                                                                                                                                                             
     STATUS         int                Status                                                                                                                                                                                                                                               
     SCODE          int                Machine standard code:  1:NEMA 2:IEC                                                                                                                                                                                                                 
-    DCODE          int                Machine design code. •  0 - for Custom design with equivalent circuit reactances specified •  1 - for NEMA Design A •  2 - for NEMA Design B / IEC Design N •  3 - for NEMA Design C / IEC Design H •  4 - for NEMA Design D •  5 - for NEMA Design E
+    DCODE          int                Machine design code. â€¢  0 - for Custom design with equivalent circuit reactances specified â€¢  1 - for NEMA Design A â€¢  2 - for NEMA Design B / IEC Design N â€¢  3 - for NEMA Design C / IEC Design H â€¢  4 - for NEMA Design D â€¢  5 - for NEMA Design E
     AREA           int                Area number                                                                                                                                                                                                                                          
     ZONE           int                Zone number                                                                                                                                                                                                                                          
     OWNER          int                Owner number                                                                                                                                                                                                                                         
-    TCODE          int                Type of mechanical load torque variation: •  1 - Simple power law •  2 - WECC model                                                                                                                                                                  
-    BCODE          int                Machine base power code: •  1 - Mechanical power (MW) output of the machine •  2 - Apparent electrical power (MVA) drawn by the machine                                                                                                              
+    TCODE          int                Type of mechanical load torque variation: â€¢  1 - Simple power law â€¢  2 - WECC model                                                                                                                                                                  
+    BCODE          int                Machine base power code: â€¢  1 - Mechanical power (MW) output of the machine â€¢  2 - Apparent electrical power (MVA) drawn by the machine                                                                                                              
     MBASE          float       MVA    Nominal power (see the manual for more funkyness).                                                                                                                                                                                                   
     RATEKV         float       kV     Rated voltage                                                                                                                                                                                                                                        
     PCODE          int                Scheduled power code                                                                                                                                                                                                                                 
@@ -4375,10 +4375,10 @@ RawVscDCLine
     =============  ==========  =====  ================================================================================================================================================================================================================================
     idtag          str                Element UUID                                                                                                                                                                                                                    
     NAME           str                Device name                                                                                                                                                                                                                     
-    MDC            int                Control mode: •  0 - for out-of-service •  1 - for in-service                                                                                                                                                                   
+    MDC            int                Control mode: â€¢  0 - for out-of-service â€¢  1 - for in-service                                                                                                                                                                   
     RDC            float       ohm    The dc line resistance                                                                                                                                                                                                          
     IBUS1          int                Converter bus number,                                                                                                                                                                                                           
-    TYPE1          int                Code for the type of converter dc control: •  0 - for converter out-of-service •  1 - for dc voltage control •  2 -for MW control When both converters are in-service, exactly one converter of each VSC dc line must be TYPE 1.
+    TYPE1          int                Code for the type of converter dc control: â€¢  0 - for converter out-of-service â€¢  1 - for dc voltage control â€¢  2 -for MW control When both converters are in-service, exactly one converter of each VSC dc line must be TYPE 1.
     MODE1          int                Converter ac control mode:1 -> AC voltage control 2 -> fixed AC power factor                                                                                                                                                    
     DCSET1         float       MW     Converter dc setpoint (see manual)                                                                                                                                                                                              
     ACSET1         float       p.u.   Converter ac setpoint. 1-> AC voltage, 2-> power factor                                                                                                                                                                         
@@ -4495,7 +4495,7 @@ Battery
     X0                        float              p.u.    False                 Total zero sequence reactance.                                                     
     R2                        float              p.u.    False                 Total negative sequence resistance.                                                
     X2                        float              p.u.    False                 Total negative sequence reactance.                                                 
-    Cost2                     float              e/MWh²  False                 Generation quadratic cost. Used in OPF.                                            
+    Cost2                     float              e/MWhÂ²  False                 Generation quadratic cost. Used in OPF.                                            
     Cost0                     float              e/h     False                 Generation constant cost. Used in OPF.                                             
     StartupCost               float              e/h     False                 Generation start-up cost. Used in OPF.                                             
     ShutdownCost              float              e/h     False                 Generation shut-down cost. Used in OPF.                                            
@@ -4540,25 +4540,38 @@ Branch
     build_status              enum BuildStatus          False                 Branch build status. Used in expansion planning.                                                                                                                                                                                                 
     capex                     float              e/MW   False                 Cost of investment. Used in expansion planning.                                                                                                                                                                                                  
     opex                      float              e/MWh  False                 Cost of operation. Used in expansion planning.                                                                                                                                                                                                   
+    group                     Branch group              False                 Group where this branch belongs                                                                                                                                                                                                                  
     R                         float              p.u.   False                 Total positive sequence resistance.                                                                                                                                                                                                              
     X                         float              p.u.   False                 Total positive sequence reactance.                                                                                                                                                                                                               
     B                         float              p.u.   False                 Total positive sequence shunt susceptance.                                                                                                                                                                                                       
     G                         float              p.u.   False                 Total positive sequence shunt conductance.                                                                                                                                                                                                       
     tolerance                 float              %      False                 Tolerance expected for the impedance values % is expected for transformers0% for lines.                                                                                                                                                          
     length                    float              km     False                 Length of the line (not used for calculation)                                                                                                                                                                                                    
-    temp_base                 float              ºC     False                 Base temperature at which R was measured.                                                                                                                                                                                                        
-    temp_oper                 float              ºC     False                 Operation temperature to modify R.                                                                                                                                                                                                               
-    alpha                     float              1/ºC   False                 Thermal coefficient to modify R,around a reference temperatureusing a linear approximation.For example:Copper @ 20ºC: 0.004041,Copper @ 75ºC: 0.00323,Annealed copper @ 20ºC: 0.00393,Aluminum @ 20ºC: 0.004308,Aluminum @ 75ºC: 0.00330         
+    temp_base                 float              ÂºC     False                 Base temperature at which R was measured.                                                                                                                                                                                                        
+    temp_oper                 float              ÂºC     False                 Operation temperature to modify R.                                                                                                                                                                                                               
+    alpha                     float              1/ÂºC   False                 Thermal coefficient to modify R,around a reference temperatureusing a linear approximation.For example:Copper @ 20ÂºC: 0.004041,Copper @ 75ÂºC: 0.00323,Annealed copper @ 20ÂºC: 0.00393,Aluminum @ 20ÂºC: 0.004308,Aluminum @ 75ÂºC: 0.00330         
     tap_module                float                     False                 Tap changer module, it a value close to 1.0                                                                                                                                                                                                      
     angle                     float              rad    False                 Angle shift of the tap changer.                                                                                                                                                                                                                  
-    template                  enum BranchType           False                                                                                                                                                                                                                                                                  
     bus_to_regulated          bool                      False                 Is the regulation at the bus to?                                                                                                                                                                                                                 
     vset                      float              p.u.   False                 set control voltage.                                                                                                                                                                                                                             
     r_fault                   float              p.u.   False                 Fault resistance.                                                                                                                                                                                                                                
     x_fault                   float              p.u.   False                 Fault reactance.                                                                                                                                                                                                                                 
     fault_pos                 float              p.u.   False                 proportion of the fault location measured from the "from" bus.                                                                                                                                                                                   
-    branch_type               enum BranchType    p.u.   False                 Fault resistance.                                                                                                                                                                                                                                
     ========================  =================  =====  =========  =========  ========================================================================================================================================================================================================================================  =======
+
+
+Branch group
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. table::
+
+    =====  ==========  ====  =========  =========  ===================  =======
+    name   class_type  unit  mandatory  max_chars     descriptions      comment
+    =====  ==========  ====  =========  =========  ===================  =======
+    idtag  str               False                 Unique ID                   
+    name   str               False                 Name of the branch.         
+    code   str               False                 Secondary ID                
+    =====  ==========  ====  =========  =========  ===================  =======
 
 
 Bus
@@ -4566,38 +4579,39 @@ Bus
 
 .. table::
 
-    ===========  ==========  ======  =========  =========  ===============================================================================================  =======
-       name      class_type   unit   mandatory  max_chars                                           descriptions                                            comment
-    ===========  ==========  ======  =========  =========  ===============================================================================================  =======
-    idtag        str                 False                 Unique ID                                                                                               
-    name         str                 False                 Name of the branch.                                                                                     
-    code         str                 False                 Secondary ID                                                                                            
-    active       bool                False                 Is the bus active? used to disable the bus.                                                             
-    is_slack     bool                False                 Force the bus to be of slack type.                                                                      
-    is_dc        bool                False                 Is this bus of DC type?.                                                                                
-    is_internal  bool                False                 Is this bus part of a composite transformer, such as  a 3-winding transformer or a fluid node?.         
-    Vnom         float       kV      False                 Nominal line voltage of the bus.                                                                        
-    Vm0          float       p.u.    False                 Voltage module guess.                                                                                   
-    Va0          float       rad.    False                 Voltage angle guess.                                                                                    
-    Vmin         float       p.u.    False                 Lower range of allowed voltage module.                                                                  
-    Vmax         float       p.u.    False                 Higher range of allowed voltage module.                                                                 
-    Vm_cost      float       e/unit  False                 Cost of over and under voltages                                                                         
-    angle_min    float       rad.    False                 Lower range of allowed voltage angle.                                                                   
-    angle_max    float       rad.    False                 Higher range of allowed voltage angle.                                                                  
-    angle_cost   float       e/unit  False                 Cost of over and under angles                                                                           
-    r_fault      float       p.u.    False                 Resistance of the fault.This is used for short circuit studies.                                         
-    x_fault      float       p.u.    False                 Reactance of the fault.This is used for short circuit studies.                                          
-    x            float       px      False                 x position in pixels.                                                                                   
-    y            float       px      False                 y position in pixels.                                                                                   
-    h            float       px      False                 height of the bus in pixels.                                                                            
-    w            float       px      False                 Width of the bus in pixels.                                                                             
-    country      Country             False                 Country of the bus                                                                                      
-    area         Area                False                 Area of the bus                                                                                         
-    zone         Zone                False                 Zone of the bus                                                                                         
-    substation   Substation          False                 Substation of the bus.                                                                                  
-    longitude    float       deg     False                 longitude of the bus.                                                                                   
-    latitude     float       deg     False                 latitude of the bus.                                                                                    
-    ===========  ==========  ======  =========  =========  ===============================================================================================  =======
+    =============  =============  ======  =========  =========  ===============================================================================================  =======
+        name        class_type     unit   mandatory  max_chars                                           descriptions                                            comment
+    =============  =============  ======  =========  =========  ===============================================================================================  =======
+    idtag          str                    False                 Unique ID                                                                                               
+    name           str                    False                 Name of the branch.                                                                                     
+    code           str                    False                 Secondary ID                                                                                            
+    active         bool                   False                 Is the bus active? used to disable the bus.                                                             
+    is_slack       bool                   False                 Force the bus to be of slack type.                                                                      
+    is_dc          bool                   False                 Is this bus of DC type?.                                                                                
+    is_internal    bool                   False                 Is this bus part of a composite transformer, such as  a 3-winding transformer or a fluid node?.         
+    Vnom           float          kV      False                 Nominal line voltage of the bus.                                                                        
+    Vm0            float          p.u.    False                 Voltage module guess.                                                                                   
+    Va0            float          rad.    False                 Voltage angle guess.                                                                                    
+    Vmin           float          p.u.    False                 Lower range of allowed voltage module.                                                                  
+    Vmax           float          p.u.    False                 Higher range of allowed voltage module.                                                                 
+    Vm_cost        float          e/unit  False                 Cost of over and under voltages                                                                         
+    angle_min      float          rad.    False                 Lower range of allowed voltage angle.                                                                   
+    angle_max      float          rad.    False                 Higher range of allowed voltage angle.                                                                  
+    angle_cost     float          e/unit  False                 Cost of over and under angles                                                                           
+    r_fault        float          p.u.    False                 Resistance of the fault.This is used for short circuit studies.                                         
+    x_fault        float          p.u.    False                 Reactance of the fault.This is used for short circuit studies.                                          
+    x              float          px      False                 x position in pixels.                                                                                   
+    y              float          px      False                 y position in pixels.                                                                                   
+    h              float          px      False                 height of the bus in pixels.                                                                            
+    w              float          px      False                 Width of the bus in pixels.                                                                             
+    country        Country                False                 Country of the bus                                                                                      
+    area           Area                   False                 Area of the bus                                                                                         
+    zone           Zone                   False                 Zone of the bus                                                                                         
+    substation     Substation             False                 Substation of the bus.                                                                                  
+    voltage_level  Voltage level          False                 Voltage level of the bus.                                                                               
+    longitude      float          deg     False                 longitude of the bus.                                                                                   
+    latitude       float          deg     False                 latitude of the bus.                                                                                    
+    =============  =============  ======  =========  =========  ===============================================================================================  =======
 
 
 BusBar
@@ -4605,15 +4619,32 @@ BusBar
 
 .. table::
 
-    ==========  =================  ====  =========  =========  =====================================  =======
-       name        class_type      unit  mandatory  max_chars              descriptions               comment
-    ==========  =================  ====  =========  =========  =====================================  =======
-    idtag       str                      False                 Unique ID                                     
-    name        str                      False                 Name of the branch.                           
-    code        str                      False                 Secondary ID                                  
-    substation  Substation               False                 Substation of this bus bar (optional)         
-    cn          Connectivity Node        False                 Internal connectvity node                     
-    ==========  =================  ====  =========  =========  =====================================  =======
+    =============  =================  ====  =========  =========  ===================================  =======
+        name          class_type      unit  mandatory  max_chars             descriptions              comment
+    =============  =================  ====  =========  =========  ===================================  =======
+    idtag          str                      False                 Unique ID                                   
+    name           str                      False                 Name of the branch.                         
+    code           str                      False                 Secondary ID                                
+    voltage_level  Voltage level            False                 Substation voltage level (optional)         
+    cn             Connectivity Node        False                 Internal connectvity node                   
+    =============  =================  ====  =========  =========  ===================================  =======
+
+
+Comunity
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. table::
+
+    =========  ==========  ====  =========  =========  =========================================================================  =======
+      name     class_type  unit  mandatory  max_chars                                descriptions                                 comment
+    =========  ==========  ====  =========  =========  =========================================================================  =======
+    idtag      str               False                 Unique ID                                                                         
+    name       str               False                 Name of the branch.                                                               
+    code       str               False                 Secondary ID                                                                      
+    longitude  float       deg   False                 longitude of the bus.                                                             
+    latitude   float       deg   False                 latitude of the bus.                                                              
+    country    Country           False                 Substation country, altenativelly this can be obtained from the community         
+    =========  ==========  ====  =========  =========  =========================================================================  =======
 
 
 Connectivity Node
@@ -4670,24 +4701,25 @@ Controllable shunt
 
 .. table::
 
-    ============  =================  =====  =========  =========  ================================================  =======
-        name         class_type      unit   mandatory  max_chars                    descriptions                    comment
-    ============  =================  =====  =========  =========  ================================================  =======
-    idtag         str                       False                 Unique ID                                                
-    name          str                       False                 Name of the branch.                                      
-    code          str                       False                 Secondary ID                                             
-    bus           Bus                       False                 Connection bus                                           
-    cn            Connectivity Node         False                 Connection connectivity node                             
-    active        bool                      False                 Is the load active?                                      
-    mttf          float              h      False                 Mean time to failure                                     
-    mttr          float              h      False                 Mean time to recovery                                    
-    capex         float              e/MW   False                 Cost of investment. Used in expansion planning.          
-    opex          float              e/MWh  False                 Cost of operation. Used in expansion planning.           
-    build_status  enum BuildStatus          False                 Branch build status. Used in expansion planning.         
-    Cost          float              e/MWh  False                 Cost of not served energy. Used in OPF.                  
-    step          int                       False                 Device tap step                                          
-    is_nonlinear  bool                      False                 Is non-linear?                                           
-    ============  =================  =====  =========  =========  ================================================  =======
+    =============  =================  =====  =========  =========  ================================================  =======
+        name          class_type      unit   mandatory  max_chars                    descriptions                    comment
+    =============  =================  =====  =========  =========  ================================================  =======
+    idtag          str                       False                 Unique ID                                                
+    name           str                       False                 Name of the branch.                                      
+    code           str                       False                 Secondary ID                                             
+    bus            Bus                       False                 Connection bus                                           
+    cn             Connectivity Node         False                 Connection connectivity node                             
+    active         bool                      False                 Is the load active?                                      
+    mttf           float              h      False                 Mean time to failure                                     
+    mttr           float              h      False                 Mean time to recovery                                    
+    capex          float              e/MW   False                 Cost of investment. Used in expansion planning.          
+    opex           float              e/MWh  False                 Cost of operation. Used in expansion planning.           
+    build_status   enum BuildStatus          False                 Branch build status. Used in expansion planning.         
+    Cost           float              e/MWh  False                 Cost of not served energy. Used in OPF.                  
+    step           int                       False                 Device tap step                                          
+    is_nonlinear   bool                      False                 Is non-linear?                                           
+    is_controlled  bool                      False                 Is controlled?                                           
+    =============  =================  =====  =========  =========  ================================================  =======
 
 
 Country
@@ -4757,11 +4789,13 @@ DC line
     build_status              enum BuildStatus          False                 Branch build status. Used in expansion planning.                                                                                    
     capex                     float              e/MW   False                 Cost of investment. Used in expansion planning.                                                                                     
     opex                      float              e/MWh  False                 Cost of operation. Used in expansion planning.                                                                                      
+    group                     Branch group              False                 Group where this branch belongs                                                                                                     
     R                         float              p.u.   False                 Total positive sequence resistance.                                                                                                 
     length                    float              km     False                 Length of the line (not used for calculation)                                                                                       
     r_fault                   float              p.u.   False                 Resistance of the mid-line fault.Used in short circuit studies.                                                                     
     fault_pos                 float              p.u.   False                 Per-unit positioning of the fault:0 would be at the "from" side,1 would be at the "to" side,therefore 0.5 is at the middle.         
     template                  Sequence line             False                                                                                                                                                     
+    locations                 Line locations            False                                                                                                                                                     
     ========================  =================  =====  =========  =========  ===========================================================================================================================  =======
 
 
@@ -4779,6 +4813,35 @@ Emission
     cost   float       e/t   False                 Cost of emissions (e / ton)         
     color  str               False                 Color to paint                      
     =====  ==========  ====  =========  =========  ===========================  =======
+
+
+External grid
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. table::
+
+    =====================  =====================  =======  =========  =========  =========================================================================  =======
+            name                class_type         unit    mandatory  max_chars                                descriptions                                 comment
+    =====================  =====================  =======  =========  =========  =========================================================================  =======
+    idtag                  str                             False                 Unique ID                                                                         
+    name                   str                             False                 Name of the branch.                                                               
+    code                   str                             False                 Secondary ID                                                                      
+    bus                    Bus                             False                 Connection bus                                                                    
+    cn                     Connectivity Node               False                 Connection connectivity node                                                      
+    active                 bool                            False                 Is the load active?                                                               
+    mttf                   float                  h        False                 Mean time to failure                                                              
+    mttr                   float                  h        False                 Mean time to recovery                                                             
+    capex                  float                  e/MW     False                 Cost of investment. Used in expansion planning.                                   
+    opex                   float                  e/MWh    False                 Cost of operation. Used in expansion planning.                                    
+    build_status           enum BuildStatus                False                 Branch build status. Used in expansion planning.                                  
+    Cost                   float                  e/MWh    False                 Cost of not served energy. Used in OPF.                                           
+    P                      float                  MW       False                 Active power                                                                      
+    Q                      float                  MVAr     False                 Reactive power                                                                    
+    mode                   enum ExternalGridMode           False                 Operation mode of the external grid (voltage or load)                             
+    substituted_device_id  str                             False                 idtag of the device that was substituted by this external grid equivalent         
+    Vm                     float                  p.u.     False                 Active power                                                                      
+    Va                     float                  radians  False                 Reactive power                                                                    
+    =====================  =====================  =======  =========  =========  =========================================================================  =======
 
 
 Fluid P2X
@@ -4864,17 +4927,18 @@ Fluid path
 
 .. table::
 
-    ========  ==========  ====  =========  =========  ===================  =======
-      name    class_type  unit  mandatory  max_chars     descriptions      comment
-    ========  ==========  ====  =========  =========  ===================  =======
-    idtag     str               False                 Unique ID                   
-    name      str               False                 Name of the branch.         
-    code      str               False                 Secondary ID                
-    source    Fluid node        False                 Source node                 
-    target    Fluid node        False                 Target node                 
-    min_flow  float       m3/s  False                 Minimum flow                
-    max_flow  float       m3/s  False                 Maximum flow                
-    ========  ==========  ====  =========  =========  ===================  =======
+    =========  ==============  ====  =========  =========  ===================  =======
+      name       class_type    unit  mandatory  max_chars     descriptions      comment
+    =========  ==============  ====  =========  =========  ===================  =======
+    idtag      str                   False                 Unique ID                   
+    name       str                   False                 Name of the branch.         
+    code       str                   False                 Secondary ID                
+    source     Fluid node            False                 Source node                 
+    target     Fluid node            False                 Target node                 
+    min_flow   float           m3/s  False                 Minimum flow                
+    max_flow   float           m3/s  False                 Maximum flow                
+    locations  Line locations        False                 Locations                   
+    =========  ==============  ====  =========  =========  ===================  =======
 
 
 Fuel
@@ -4933,7 +4997,7 @@ Generator
     X0                        float              p.u.    False                 Total zero sequence reactance.                                                     
     R2                        float              p.u.    False                 Total negative sequence resistance.                                                
     X2                        float              p.u.    False                 Total negative sequence reactance.                                                 
-    Cost2                     float              e/MWh²  False                 Generation quadratic cost. Used in OPF.                                            
+    Cost2                     float              e/MWhÂ²  False                 Generation quadratic cost. Used in OPF.                                            
     Cost0                     float              e/h     False                 Generation constant cost. Used in OPF.                                             
     StartupCost               float              e/h     False                 Generation start-up cost. Used in OPF.                                             
     ShutdownCost              float              e/h     False                 Generation shut-down cost. Used in OPF.                                            
@@ -5022,6 +5086,7 @@ HVDC Line
     build_status              enum BuildStatus              False                 Branch build status. Used in expansion planning.                                                    
     capex                     float                 e/MW    False                 Cost of investment. Used in expansion planning.                                                     
     opex                      float                 e/MWh   False                 Cost of operation. Used in expansion planning.                                                      
+    group                     Branch group                  False                 Group where this branch belongs                                                                     
     dispatchable              bool                          False                 Is the line power optimizable?                                                                      
     control_mode              enum HvdcControlType  -       False                 Control type.                                                                                       
     Pset                      float                 MW      False                 Set power flow.                                                                                     
@@ -5035,6 +5100,7 @@ HVDC Line
     min_firing_angle_t        float                 rad     False                 minimum firing angle at the "to" side.                                                              
     max_firing_angle_t        float                 rad     False                 maximum firing angle at the "to" side.                                                              
     length                    float                 km      False                 Length of the branch (not used for calculation)                                                     
+    locations                 Line locations                False                                                                                                                     
     ========================  ====================  ======  =========  =========  ===========================================================================================  =======
 
 
@@ -5099,6 +5165,7 @@ Line
     build_status              enum BuildStatus          False                 Branch build status. Used in expansion planning.                                                                                                                                                                                                 
     capex                     float              e/MW   False                 Cost of investment. Used in expansion planning.                                                                                                                                                                                                  
     opex                      float              e/MWh  False                 Cost of operation. Used in expansion planning.                                                                                                                                                                                                   
+    group                     Branch group              False                 Group where this branch belongs                                                                                                                                                                                                                  
     R                         float              p.u.   False                 Total positive sequence resistance.                                                                                                                                                                                                              
     X                         float              p.u.   False                 Total positive sequence reactance.                                                                                                                                                                                                               
     B                         float              p.u.   False                 Total positive sequence shunt susceptance.                                                                                                                                                                                                       
@@ -5110,13 +5177,14 @@ Line
     B2                        float              p.u.   False                 Total negative sequence shunt susceptance.                                                                                                                                                                                                       
     tolerance                 float              %      False                 Tolerance expected for the impedance values % is expected for transformers0% for lines.                                                                                                                                                          
     length                    float              km     False                 Length of the line (not used for calculation)                                                                                                                                                                                                    
-    temp_base                 float              ºC     False                 Base temperature at which R was measured.                                                                                                                                                                                                        
-    temp_oper                 float              ºC     False                 Operation temperature to modify R.                                                                                                                                                                                                               
-    alpha                     float              1/ºC   False                 Thermal coefficient to modify R,around a reference temperatureusing a linear approximation.For example:Copper @ 20ºC: 0.004041,Copper @ 75ºC: 0.00323,Annealed copper @ 20ºC: 0.00393,Aluminum @ 20ºC: 0.004308,Aluminum @ 75ºC: 0.00330         
+    temp_base                 float              ÂºC     False                 Base temperature at which R was measured.                                                                                                                                                                                                        
+    temp_oper                 float              ÂºC     False                 Operation temperature to modify R.                                                                                                                                                                                                               
+    alpha                     float              1/ÂºC   False                 Thermal coefficient to modify R,around a reference temperatureusing a linear approximation.For example:Copper @ 20ÂºC: 0.004041,Copper @ 75ÂºC: 0.00323,Annealed copper @ 20ÂºC: 0.00393,Aluminum @ 20ÂºC: 0.004308,Aluminum @ 75ÂºC: 0.00330         
     r_fault                   float              p.u.   False                 Resistance of the mid-line fault.Used in short circuit studies.                                                                                                                                                                                  
     x_fault                   float              p.u.   False                 Reactance of the mid-line fault.Used in short circuit studies.                                                                                                                                                                                   
     fault_pos                 float              p.u.   False                 Per-unit positioning of the fault:0 would be at the "from" side,1 would be at the "to" side,therefore 0.5 is at the middle.                                                                                                                      
     template                  Sequence line             False                                                                                                                                                                                                                                                                  
+    locations                 Line locations            False                                                                                                                                                                                                                                                                  
     ========================  =================  =====  =========  =========  ========================================================================================================================================================================================================================================  =======
 
 
@@ -5149,6 +5217,40 @@ Load
     ============  =================  =====  =========  =========  =======================================================  =======
 
 
+Municipality
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. table::
+
+    =========  ==========  ====  =========  =========  ===========================================================================  =======
+      name     class_type  unit  mandatory  max_chars                                 descriptions                                  comment
+    =========  ==========  ====  =========  =========  ===========================================================================  =======
+    idtag      str               False                 Unique ID                                                                           
+    name       str               False                 Name of the branch.                                                                 
+    code       str               False                 Secondary ID                                                                        
+    longitude  float       deg   False                 longitude of the bus.                                                               
+    latitude   float       deg   False                 latitude of the bus.                                                                
+    region     Region            False                 Substation region, altenativelly this can be obtained from the municipality         
+    =========  ==========  ====  =========  =========  ===========================================================================  =======
+
+
+Region
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. table::
+
+    =========  ==========  ====  =========  =========  ========================================================================  =======
+      name     class_type  unit  mandatory  max_chars                                descriptions                                comment
+    =========  ==========  ====  =========  =========  ========================================================================  =======
+    idtag      str               False                 Unique ID                                                                        
+    name       str               False                 Name of the branch.                                                              
+    code       str               False                 Secondary ID                                                                     
+    longitude  float       deg   False                 longitude of the bus.                                                            
+    latitude   float       deg   False                 latitude of the bus.                                                             
+    community  Comunity          False                 Substation community, altenativelly this can be obtained from the region         
+    =========  ==========  ====  =========  =========  ========================================================================  =======
+
+
 Sequence line
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -5169,6 +5271,49 @@ Sequence line
     X0     float       Ohm/km  False                 Zero-sequence reactance per km                     
     B0     float       uS/km   False                 Zero-sequence shunt susceptance per km             
     =====  ==========  ======  =========  =========  ==========================================  =======
+
+
+Series reactance
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. table::
+
+    ========================  =================  =====  =========  =========  ========================================================================================================================================================================================================================================  =======
+              name               class_type      unit   mandatory  max_chars                                                                                                                descriptions                                                                                                                comment
+    ========================  =================  =====  =========  =========  ========================================================================================================================================================================================================================================  =======
+    idtag                     str                       False                 Unique ID                                                                                                                                                                                                                                        
+    name                      str                       False                 Name of the branch.                                                                                                                                                                                                                              
+    code                      str                       False                 Secondary ID                                                                                                                                                                                                                                     
+    bus_from                  Bus                       False                 Name of the bus at the "from" side                                                                                                                                                                                                               
+    bus_to                    Bus                       False                 Name of the bus at the "to" side                                                                                                                                                                                                                 
+    cn_from                   Connectivity Node         False                 Name of the connectivity node at the "from" side                                                                                                                                                                                                 
+    cn_to                     Connectivity Node         False                 Name of the connectivity node at the "to" side                                                                                                                                                                                                   
+    active                    bool                      False                 Is active?                                                                                                                                                                                                                                       
+    rate                      float              MVA    False                 Thermal rating power                                                                                                                                                                                                                             
+    contingency_factor        float              p.u.   False                 Rating multiplier for contingencies                                                                                                                                                                                                              
+    protection_rating_factor  float              p.u.   False                 Rating multiplier that indicates the maximum flow before the protections tripping                                                                                                                                                                
+    monitor_loading           bool                      False                 Monitor this device loading for OPF, NTC or contingency studies.                                                                                                                                                                                 
+    mttf                      float              h      False                 Mean time to failure                                                                                                                                                                                                                             
+    mttr                      float              h      False                 Mean time to repair                                                                                                                                                                                                                              
+    Cost                      float              e/MWh  False                 Cost of overloads. Used in OPF                                                                                                                                                                                                                   
+    build_status              enum BuildStatus          False                 Branch build status. Used in expansion planning.                                                                                                                                                                                                 
+    capex                     float              e/MW   False                 Cost of investment. Used in expansion planning.                                                                                                                                                                                                  
+    opex                      float              e/MWh  False                 Cost of operation. Used in expansion planning.                                                                                                                                                                                                   
+    group                     Branch group              False                 Group where this branch belongs                                                                                                                                                                                                                  
+    R                         float              p.u.   False                 Total positive sequence resistance.                                                                                                                                                                                                              
+    X                         float              p.u.   False                 Total positive sequence reactance.                                                                                                                                                                                                               
+    R0                        float              p.u.   False                 Total zero sequence resistance.                                                                                                                                                                                                                  
+    X0                        float              p.u.   False                 Total zero sequence reactance.                                                                                                                                                                                                                   
+    R2                        float              p.u.   False                 Total negative sequence resistance.                                                                                                                                                                                                              
+    X2                        float              p.u.   False                 Total negative sequence reactance.                                                                                                                                                                                                               
+    tolerance                 float              %      False                 Tolerance expected for the impedance values % is expected for transformers0% for lines.                                                                                                                                                          
+    temp_base                 float              ÂºC     False                 Base temperature at which R was measured.                                                                                                                                                                                                        
+    temp_oper                 float              ÂºC     False                 Operation temperature to modify R.                                                                                                                                                                                                               
+    alpha                     float              1/ÂºC   False                 Thermal coefficient to modify R,around a reference temperatureusing a linear approximation.For example:Copper @ 20ÂºC: 0.004041,Copper @ 75ÂºC: 0.00323,Annealed copper @ 20ÂºC: 0.00393,Aluminum @ 20ÂºC: 0.004308,Aluminum @ 75ÂºC: 0.00330         
+    r_fault                   float              p.u.   False                 Resistance of the mid-line fault.Used in short circuit studies.                                                                                                                                                                                  
+    x_fault                   float              p.u.   False                 Reactance of the mid-line fault.Used in short circuit studies.                                                                                                                                                                                   
+    fault_pos                 float              p.u.   False                 Per-unit positioning of the fault:0 would be at the "from" side,1 would be at the "to" side,therefore 0.5 is at the middle.                                                                                                                      
+    ========================  =================  =====  =========  =========  ========================================================================================================================================================================================================================================  =======
 
 
 Shunt
@@ -5228,15 +5373,58 @@ Substation
 
 .. table::
 
-    =========  ==========  ====  =========  =========  =====================  =======
-      name     class_type  unit  mandatory  max_chars      descriptions       comment
-    =========  ==========  ====  =========  =========  =====================  =======
-    idtag      str               False                 Unique ID                     
-    name       str               False                 Name of the branch.           
-    code       str               False                 Secondary ID                  
-    longitude  float       deg   False                 longitude of the bus.         
-    latitude   float       deg   False                 latitude of the bus.          
-    =========  ==========  ====  =========  =========  =====================  =======
+    ============  ============  ====  =========  =========  ===========================================================================  =======
+        name       class_type   unit  mandatory  max_chars                                 descriptions                                  comment
+    ============  ============  ====  =========  =========  ===========================================================================  =======
+    idtag         str                 False                 Unique ID                                                                           
+    name          str                 False                 Name of the branch.                                                                 
+    code          str                 False                 Secondary ID                                                                        
+    longitude     float         deg   False                 longitude of the bus.                                                               
+    latitude      float         deg   False                 latitude of the bus.                                                                
+    area          Area                False                 Substation area, altenativelly this can be obtained from the zone                   
+    zone          Zone                False                 Substation area                                                                     
+    country       Country             False                 Substation country, altenativelly this can be obtained from the community           
+    community     Comunity            False                 Substation community, altenativelly this can be obtained from the region            
+    region        Region              False                 Substation region, altenativelly this can be obtained from the municipality         
+    municipality  Municipality        False                 Substation municipality                                                             
+    address       str                 False                 Substation address                                                                  
+    ============  ============  ====  =========  =========  ===========================================================================  =======
+
+
+Switch
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. table::
+
+    ========================  =================  =====  =========  =========  =================================================================================  =======
+              name               class_type      unit   mandatory  max_chars                                    descriptions                                     comment
+    ========================  =================  =====  =========  =========  =================================================================================  =======
+    idtag                     str                       False                 Unique ID                                                                                 
+    name                      str                       False                 Name of the branch.                                                                       
+    code                      str                       False                 Secondary ID                                                                              
+    bus_from                  Bus                       False                 Name of the bus at the "from" side                                                        
+    bus_to                    Bus                       False                 Name of the bus at the "to" side                                                          
+    cn_from                   Connectivity Node         False                 Name of the connectivity node at the "from" side                                          
+    cn_to                     Connectivity Node         False                 Name of the connectivity node at the "to" side                                            
+    active                    bool                      False                 Is active?                                                                                
+    rate                      float              MVA    False                 Thermal rating power                                                                      
+    contingency_factor        float              p.u.   False                 Rating multiplier for contingencies                                                       
+    protection_rating_factor  float              p.u.   False                 Rating multiplier that indicates the maximum flow before the protections tripping         
+    monitor_loading           bool                      False                 Monitor this device loading for OPF, NTC or contingency studies.                          
+    mttf                      float              h      False                 Mean time to failure                                                                      
+    mttr                      float              h      False                 Mean time to repair                                                                       
+    Cost                      float              e/MWh  False                 Cost of overloads. Used in OPF                                                            
+    build_status              enum BuildStatus          False                 Branch build status. Used in expansion planning.                                          
+    capex                     float              e/MW   False                 Cost of investment. Used in expansion planning.                                           
+    opex                      float              e/MWh  False                 Cost of operation. Used in expansion planning.                                            
+    group                     Branch group              False                 Group where this branch belongs                                                           
+    R                         float              pu     False                 Positive-sequence resistance                                                              
+    X                         float              pu     False                 Positive-sequence reactance                                                               
+    is_open                   bool                      False                 Switch is open                                                                            
+    retained                  bool                      False                 Switch is retained                                                                        
+    normal_open               bool                      False                 Normal position of the switch                                                             
+    rated_current             float              kA     False                 Rated current of the switch device.                                                       
+    ========================  =================  =====  =========  =========  =================================================================================  =======
 
 
 Technology
@@ -5307,6 +5495,7 @@ Transformer
     build_status              enum BuildStatus                    False                 Branch build status. Used in expansion planning.                                                                                                                                                                                                 
     capex                     float                        e/MW   False                 Cost of investment. Used in expansion planning.                                                                                                                                                                                                  
     opex                      float                        e/MWh  False                 Cost of operation. Used in expansion planning.                                                                                                                                                                                                   
+    group                     Branch group                        False                 Group where this branch belongs                                                                                                                                                                                                                  
     R                         float                        p.u.   False                 Total positive sequence resistance.                                                                                                                                                                                                              
     X                         float                        p.u.   False                 Total positive sequence reactance.                                                                                                                                                                                                               
     G                         float                        p.u.   False                 Total positive sequence shunt conductance.                                                                                                                                                                                                       
@@ -5320,6 +5509,7 @@ Transformer
     G2                        float                        p.u.   False                 Total negative sequence shunt conductance.                                                                                                                                                                                                       
     B2                        float                        p.u.   False                 Total negative sequence shunt susceptance.                                                                                                                                                                                                       
     tolerance                 float                        %      False                 Tolerance expected for the impedance values% is expected for transformers0% for lines.                                                                                                                                                           
+    tap_changer               Tap changer                         False                 Tap changer object                                                                                                                                                                                                                               
     tap_module                float                               False                 Tap changer module, it a value close to 1.0                                                                                                                                                                                                      
     tap_module_max            float                               False                 Tap changer module max value                                                                                                                                                                                                                     
     tap_module_min            float                               False                 Tap changer module min value                                                                                                                                                                                                                     
@@ -5334,9 +5524,9 @@ Transformer
     regulation_branch         Branch                              False                 Branch where the controls are applied.                                                                                                                                                                                                           
     regulation_bus            Bus                                 False                 Bus where the regulation is applied.                                                                                                                                                                                                             
     regulation_cn             Connectivity Node                   False                 Connectivity node where the regulation is applied.                                                                                                                                                                                               
-    temp_base                 float                        ºC     False                 Base temperature at which R was measured.                                                                                                                                                                                                        
-    temp_oper                 float                        ºC     False                 Operation temperature to modify R.                                                                                                                                                                                                               
-    alpha                     float                        1/ºC   False                 Thermal coefficient to modify R,around a reference temperatureusing a linear approximation.For example:Copper @ 20ºC: 0.004041,Copper @ 75ºC: 0.00323,Annealed copper @ 20ºC: 0.00393,Aluminum @ 20ºC: 0.004308,Aluminum @ 75ºC: 0.00330         
+    temp_base                 float                        ÂºC     False                 Base temperature at which R was measured.                                                                                                                                                                                                        
+    temp_oper                 float                        ÂºC     False                 Operation temperature to modify R.                                                                                                                                                                                                               
+    alpha                     float                        1/ÂºC   False                 Thermal coefficient to modify R,around a reference temperatureusing a linear approximation.For example:Copper @ 20ÂºC: 0.004041,Copper @ 75ÂºC: 0.00323,Annealed copper @ 20ÂºC: 0.00393,Aluminum @ 20ÂºC: 0.004308,Aluminum @ 75ÂºC: 0.00330         
     HV                        float                        kV     False                 High voltage rating                                                                                                                                                                                                                              
     LV                        float                        kV     False                 Low voltage rating                                                                                                                                                                                                                               
     Sn                        float                        MVA    False                 Nominal power                                                                                                                                                                                                                                    
@@ -5432,6 +5622,7 @@ UPFC
     build_status              enum BuildStatus          False                 Branch build status. Used in expansion planning.                                          
     capex                     float              e/MW   False                 Cost of investment. Used in expansion planning.                                           
     opex                      float              e/MWh  False                 Cost of operation. Used in expansion planning.                                            
+    group                     Branch group              False                 Group where this branch belongs                                                           
     Rs                        float              p.u.   False                 Series positive sequence resistance.                                                      
     Xs                        float              p.u.   False                 Series positive sequence reactance.                                                       
     Rsh                       float              p.u.   False                 Shunt positive sequence resistance.                                                       
@@ -5498,6 +5689,7 @@ VSC
     build_status              enum BuildStatus                      False                 Branch build status. Used in expansion planning.                                          
     capex                     float                      e/MW       False                 Cost of investment. Used in expansion planning.                                           
     opex                      float                      e/MWh      False                 Cost of operation. Used in expansion planning.                                            
+    group                     Branch group                          False                 Group where this branch belongs                                                           
     R                         float                      p.u.       False                 Resistive positive sequence losses.                                                       
     X                         float                      p.u.       False                 Magnetic positive sequence losses.                                                        
     R0                        float                      p.u.       False                 Resistive zero sequence losses.                                                           
@@ -5527,6 +5719,22 @@ VSC
     ========================  =========================  =========  =========  =========  =================================================================================  =======
 
 
+Voltage level
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. table::
+
+    ==========  ==========  ====  =========  =========  =====================================  =======
+       name     class_type  unit  mandatory  max_chars              descriptions               comment
+    ==========  ==========  ====  =========  =========  =====================================  =======
+    idtag       str               False                 Unique ID                                     
+    name        str               False                 Name of the branch.                           
+    code        str               False                 Secondary ID                                  
+    Vnom        float       kV    False                 Nominal voltage                               
+    substation  Substation        False                 Substation of this bus bar (optional)         
+    ==========  ==========  ====  =========  =========  =====================================  =======
+
+
 Winding
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -5553,8 +5761,7 @@ Winding
     build_status              enum BuildStatus                    False                 Branch build status. Used in expansion planning.                                                                                                                                                                                                 
     capex                     float                        e/MW   False                 Cost of investment. Used in expansion planning.                                                                                                                                                                                                  
     opex                      float                        e/MWh  False                 Cost of operation. Used in expansion planning.                                                                                                                                                                                                   
-    HV                        float                        kV     False                 High voltage rating                                                                                                                                                                                                                              
-    LV                        float                        kV     False                 Low voltage rating                                                                                                                                                                                                                               
+    group                     Branch group                        False                 Group where this branch belongs                                                                                                                                                                                                                  
     R                         float                        p.u.   False                 Total positive sequence resistance.                                                                                                                                                                                                              
     X                         float                        p.u.   False                 Total positive sequence reactance.                                                                                                                                                                                                               
     G                         float                        p.u.   False                 Total positive sequence shunt conductance.                                                                                                                                                                                                       
@@ -5567,8 +5774,8 @@ Winding
     X2                        float                        p.u.   False                 Total negative sequence reactance.                                                                                                                                                                                                               
     G2                        float                        p.u.   False                 Total negative sequence shunt conductance.                                                                                                                                                                                                       
     B2                        float                        p.u.   False                 Total negative sequence shunt susceptance.                                                                                                                                                                                                       
-    conn                      enum WindingsConnection             False                 Windings connection (from, to):G: grounded starS: ungrounded starD: delta                                                                                                                                                                        
-    tolerance                 float                        %      False                 Tolerance expected for the impedance values.                                                                                                                                                                                                     
+    tolerance                 float                        %      False                 Tolerance expected for the impedance values% is expected for transformers0% for lines.                                                                                                                                                           
+    tap_changer               Tap changer                         False                 Tap changer object                                                                                                                                                                                                                               
     tap_module                float                               False                 Tap changer module, it a value close to 1.0                                                                                                                                                                                                      
     tap_module_max            float                               False                 Tap changer module max value                                                                                                                                                                                                                     
     tap_module_min            float                               False                 Tap changer module min value                                                                                                                                                                                                                     
@@ -5576,11 +5783,24 @@ Winding
     tap_phase_max             float                        rad    False                 Max angle.                                                                                                                                                                                                                                       
     tap_phase_min             float                        rad    False                 Min angle.                                                                                                                                                                                                                                       
     control_mode              enum TransformerControlType         False                 Control type of the transformer                                                                                                                                                                                                                  
+    tap_module_control_mode   enum TapModuleControl               False                 Control available with the tap module                                                                                                                                                                                                            
+    tap_angle_control_mode    enum TapAngleControl                False                 Control available with the tap angle                                                                                                                                                                                                             
     vset                      float                        p.u.   False                 Objective voltage at the "to" side of the bus when regulating the tap.                                                                                                                                                                           
     Pset                      float                        p.u.   False                 Objective power at the "from" side of when regulating the angle.                                                                                                                                                                                 
-    temp_base                 float                        ºC     False                 Base temperature at which R was measured.                                                                                                                                                                                                        
-    temp_oper                 float                        ºC     False                 Operation temperature to modify R.                                                                                                                                                                                                               
-    alpha                     float                        1/ºC   False                 Thermal coefficient to modify R,around a reference temperatureusing a linear approximation.For example:Copper @ 20ºC: 0.004041,Copper @ 75ºC: 0.00323,Annealed copper @ 20ºC: 0.00393,Aluminum @ 20ºC: 0.004308,Aluminum @ 75ºC: 0.00330         
+    regulation_branch         Branch                              False                 Branch where the controls are applied.                                                                                                                                                                                                           
+    regulation_bus            Bus                                 False                 Bus where the regulation is applied.                                                                                                                                                                                                             
+    regulation_cn             Connectivity Node                   False                 Connectivity node where the regulation is applied.                                                                                                                                                                                               
+    temp_base                 float                        ÂºC     False                 Base temperature at which R was measured.                                                                                                                                                                                                        
+    temp_oper                 float                        ÂºC     False                 Operation temperature to modify R.                                                                                                                                                                                                               
+    alpha                     float                        1/ÂºC   False                 Thermal coefficient to modify R,around a reference temperatureusing a linear approximation.For example:Copper @ 20ÂºC: 0.004041,Copper @ 75ÂºC: 0.00323,Annealed copper @ 20ÂºC: 0.00393,Aluminum @ 20ÂºC: 0.004308,Aluminum @ 75ÂºC: 0.00330         
+    HV                        float                        kV     False                 High voltage rating                                                                                                                                                                                                                              
+    LV                        float                        kV     False                 Low voltage rating                                                                                                                                                                                                                               
+    Sn                        float                        MVA    False                 Nominal power                                                                                                                                                                                                                                    
+    Pcu                       float                        kW     False                 Copper losses (optional)                                                                                                                                                                                                                         
+    Pfe                       float                        kW     False                 Iron losses (optional)                                                                                                                                                                                                                           
+    I0                        float                        %      False                 No-load current (optional)                                                                                                                                                                                                                       
+    Vsc                       float                        %      False                 Short-circuit voltage (optional)                                                                                                                                                                                                                 
+    conn                      enum WindingsConnection             False                 Windings connection (from, to):G: grounded starS: ungrounded starD: delta                                                                                                                                                                        
     template                  Transformer type                    False                                                                                                                                                                                                                                                                  
     ========================  ===========================  =====  =========  =========  ========================================================================================================================================================================================================================================  =======
 
@@ -5608,14 +5828,15 @@ Zone
 
 .. table::
 
-    =========  ==========  ====  =========  =========  =====================  =======
-      name     class_type  unit  mandatory  max_chars      descriptions       comment
-    =========  ==========  ====  =========  =========  =====================  =======
-    idtag      str               False                 Unique ID                     
-    name       str               False                 Name of the branch.           
-    code       str               False                 Secondary ID                  
-    longitude  float       deg   False                 longitude of the bus.         
-    latitude   float       deg   False                 latitude of the bus.          
-    =========  ==========  ====  =========  =========  =====================  =======
+    =========  ==========  ====  =========  =========  =================================================================  =======
+      name     class_type  unit  mandatory  max_chars                            descriptions                             comment
+    =========  ==========  ====  =========  =========  =================================================================  =======
+    idtag      str               False                 Unique ID                                                                 
+    name       str               False                 Name of the branch.                                                       
+    code       str               False                 Secondary ID                                                              
+    longitude  float       deg   False                 longitude of the bus.                                                     
+    latitude   float       deg   False                 latitude of the bus.                                                      
+    area       Area              False                 Substation area, altenativelly this can be obtained from the zone         
+    =========  ==========  ====  =========  =========  =================================================================  =======
 
 

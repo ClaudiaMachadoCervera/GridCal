@@ -22,11 +22,12 @@ from typing import Tuple, Union
 from matplotlib import pyplot as plt
 
 from GridCalEngine.Devices.Substation.bus import Bus
-from GridCalEngine.enumerations import DeviceType, BuildStatus
+from GridCalEngine.enumerations import DeviceType, BuildStatus, SubObjectType
 from GridCalEngine.Devices.Parents.branch_parent import BranchParent
 from GridCalEngine.enumerations import HvdcControlType
 from GridCalEngine.basic_structures import Vec, IntVec
 from GridCalEngine.Devices.profile import Profile
+from GridCalEngine.Devices.Branches.line_locations import LineLocations
 
 
 def firing_angles_to_reactive_limits(P, alphamin, alphamax) -> Tuple[float, float]:
@@ -185,9 +186,6 @@ class HvdcLine(BranchParent):
                               Cost=overload_cost,
                               device_type=DeviceType.HVDCLineDevice)
 
-        # List of measurements
-        self.measurements = list()
-
         # line length in km
         self.length = length
 
@@ -238,6 +236,9 @@ class HvdcLine(BranchParent):
 
         self.n_lines = n_lines
 
+        # Line locations
+        self._locations: LineLocations = LineLocations()
+
         self.register(key='dispatchable', units='', tpe=bool, definition='Is the line power optimizable?')
 
         self.register(key='control_mode', units='-', tpe=HvdcControlType, definition='Control type.')
@@ -262,6 +263,10 @@ class HvdcLine(BranchParent):
                       definition='maximum firing angle at the "to" side.')
 
         self.register(key='length', units='km', tpe=float, definition='Length of the branch (not used for calculation)')
+
+        self.register(key='locations', units='', tpe=SubObjectType.LineLocations, definition='', editable=False)
+
+        self.registered_properties['Cost'].old_names.append('overload_cost')
 
     @property
     def active_prof(self) -> Profile:
@@ -399,6 +404,23 @@ class HvdcLine(BranchParent):
         else:
             raise Exception(str(type(val)) + 'not supported to be set into a Vset_t_prof')
 
+    @property
+    def locations(self) -> LineLocations:
+        """
+        Cost profile
+        :return: Profile
+        """
+        return self._locations
+
+    @locations.setter
+    def locations(self, val: Union[LineLocations, np.ndarray]):
+        if isinstance(val, LineLocations):
+            self._locations = val
+        elif isinstance(val, np.ndarray):
+            self._locations.set(data=val)
+        else:
+            raise Exception(str(type(val)) + 'not supported to be set into a locations')
+
     def get_from_and_to_power(self, theta_f, theta_t, Sbase, in_pu=False):
         """
         Get the power set at both ends accounting for meaningful losses
@@ -464,123 +486,6 @@ class HvdcLine(BranchParent):
 
             data.append(obj)
         return data
-
-    def get_properties_dict(self, version=3):
-        """
-        Get json dictionary
-        :return:
-        """
-        if version == 2:
-            d = {'id': self.idtag,
-                 'type': 'hvdc',
-                 'phases': 'ps',
-                 'name': self.name,
-                 'name_code': self.code,
-                 'bus_from': self.bus_from.idtag,
-                 'bus_to': self.bus_to.idtag,
-                 'active': self.active,
-                 'rate': self.rate,
-                 'control_mode': self.control_mode.value,
-                 'r': self.r,
-                 'length': self.length,
-                 'loss_factor': self.loss_factor,
-                 'angle_droop': self.angle_droop,
-                 'vset_from': self.Vset_f,
-                 'vset_to': self.Vset_t,
-                 'Pset': self.Pset,
-                 'min_firing_angle_f': self.min_firing_angle_f,
-                 'max_firing_angle_f': self.max_firing_angle_f,
-                 'min_firing_angle_t': self.min_firing_angle_t,
-                 'max_firing_angle_t': self.max_firing_angle_t,
-                 'overload_cost': self.Cost,
-                 'base_temperature': 20,
-                 'operational_temperature': 20,
-                 'alpha': 0.00330,
-                 'locations': []
-                 }
-        elif version == 3:
-            d = {'id': self.idtag,
-                 'type': 'hvdc',
-                 'phases': 'ps',
-                 'name': self.name,
-                 'name_code': self.code,
-                 'bus_from': self.bus_from.idtag,
-                 'bus_to': self.bus_to.idtag,
-                 'active': self.active,
-                 'rate': self.rate,
-                 'control_mode': self.control_mode.value,
-                 'contingency_factor1': self.contingency_factor,
-                 'contingency_factor2': self.contingency_factor,
-                 'contingency_factor3': self.contingency_factor,
-                 'r': self.r,
-                 'length': self.length,
-                 'loss_factor': self.loss_factor,
-                 'angle_droop': self.angle_droop,
-                 'vset_from': self.Vset_f,
-                 'vset_to': self.Vset_t,
-                 'Pset': self.Pset,
-                 'min_firing_angle_f': self.min_firing_angle_f,
-                 'max_firing_angle_f': self.max_firing_angle_f,
-                 'min_firing_angle_t': self.min_firing_angle_t,
-                 'max_firing_angle_t': self.max_firing_angle_t,
-                 'overload_cost': self.Cost,
-                 'base_temperature': 20,
-                 'operational_temperature': 20,
-                 'alpha': 0.00330,
-                 'capex': self.capex,
-                 'opex': self.opex,
-                 'build_status': str(self.build_status.value).lower(),
-                 'locations': []
-                 }
-        else:
-            d = dict()
-
-        return d
-
-    def get_profiles_dict(self, version=3):
-        """
-
-        :return:
-        """
-
-        if self.active_prof is not None:
-            active_prof = self.active_prof.tolist()
-            rate_prof = self.rate_prof.tolist()
-            pset_prof = self.Pset_prof.tolist()
-            vset_prof_f = self.Vset_f_prof.tolist()
-            vset_prof_t = self.Vset_t_prof.tolist()
-            cost_prof = self.Cost_prof.tolist()
-        else:
-            active_prof = list()
-            rate_prof = list()
-            pset_prof = list()
-            cost_prof = list()
-            vset_prof_f = list()
-            vset_prof_t = list()
-
-        return {'id': self.idtag,
-                'active': active_prof,
-                'rate': rate_prof,
-                'Pset': pset_prof,
-                'vset_from': vset_prof_f,
-                'vset_to': vset_prof_t,
-                'overload_cost': cost_prof}
-
-    def get_units_dict(self, version=3):
-        """
-        Get units of the values
-        """
-        return {'rate': 'MW',
-                'length': 'km',
-                'loss_factor': '%',
-                'vset_f': 'p.u.',
-                'vset_t': 'p.u.',
-                'pset': 'MW',
-                'min_firing_angle_f': 'radians',
-                'max_firing_angle_f': 'radians',
-                'min_firing_angle_t': 'radians',
-                'max_firing_angle_t': 'radians',
-                'overload_cost': 'e/MWh'}
 
     def get_max_bus_nominal_voltage(self):
         return max(self.bus_from.Vnom, self.bus_to.Vnom)

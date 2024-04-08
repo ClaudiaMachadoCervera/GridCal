@@ -20,12 +20,13 @@ from GridCalEngine.data_logger import DataLogger
 import numpy as np
 
 
-def get_slack_id(machines: List[SynchronousMachine], terminals: List[Terminal]):
+def get_slack_id(machines: List[SynchronousMachine]):
     for m in machines:
         if m.referencePriority == 1:
-            for term in terminals:
-                if term.ConductingEquipment.rdfid == m.rdfid:
-                    return term.TopologicalNode.rdfid
+            if not isinstance(m.Terminals, list):
+                return m.Terminals.TopologicalNode.rdfid
+            else:
+                return m.Terminals[0].TopologicalNode.rdfid
     return None
 
 
@@ -73,7 +74,8 @@ def get_pu_values_power_transformer(power_transformer: PowerTransformer, System_
     :return:
     """
     try:
-        windings = get_windings(power_transformer)
+        # windings = get_windings(power_transformer)
+        windings = list(power_transformer.PowerTransformerEnd)
 
         R, X, G, B = 0, 0, 0, 0
         R0, X0, G0, B0 = 0, 0, 0, 0
@@ -102,7 +104,8 @@ def get_pu_values_power_transformer3w(power_transformer: PowerTransformer, Syste
     :return:
     """
     try:
-        windings = get_windings(power_transformer)
+        # windings = get_windings(power_transformer)
+        windings = list(power_transformer.PowerTransformerEnd)
 
         r12, r23, r31, x12, x23, x31 = 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
 
@@ -656,7 +659,10 @@ def base_voltage_to_str(base_voltage: BaseVoltage):
 
 # endregion
 
-def get_regulating_control(cgmes_elm: RegulatingCondEq, cgmes_enums, logger: DataLogger):
+def get_regulating_control(cgmes_elm: RegulatingCondEq,
+                           cgmes_enums,
+                           logger: DataLogger):
+
     if cgmes_elm.RegulatingControl is not None:
 
         if cgmes_elm.RegulatingControl.enabled:

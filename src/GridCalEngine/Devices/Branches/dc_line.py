@@ -15,7 +15,6 @@
 # along with this program; if not, write to the Free Software Foundation,
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
-
 import pandas as pd
 from typing import Union
 from matplotlib import pyplot as plt
@@ -23,7 +22,8 @@ import numpy as np
 from GridCalEngine.Devices.Substation.bus import Bus
 from GridCalEngine.Devices.Parents.branch_parent import BranchParent
 from GridCalEngine.Devices.profile import Profile
-from GridCalEngine.enumerations import DeviceType, BuildStatus
+from GridCalEngine.enumerations import DeviceType, BuildStatus, SubObjectType
+from GridCalEngine.Devices.Branches.line_locations import LineLocations
 
 
 class DcLine(BranchParent):
@@ -132,6 +132,9 @@ class DcLine(BranchParent):
         # type template
         self.template = template
 
+        # Line locations
+        self._locations: LineLocations = LineLocations()
+
         self.register(key='R', units='p.u.', tpe=float, definition='Total positive sequence resistance.')
         self.register(key='length', units='km', tpe=float, definition='Length of the line (not used for calculation)')
         self.register(key='r_fault', units='p.u.', tpe=float,
@@ -140,6 +143,8 @@ class DcLine(BranchParent):
                       definition='Per-unit positioning of the fault:0 would be at the "from" side,1 would '
                                  'be at the "to" side,therefore 0.5 is at the middle.')
         self.register(key='template', units='', tpe=DeviceType.SequenceLineDevice, definition='', editable=False)
+
+        self.register(key='locations', units='', tpe=SubObjectType.LineLocations, definition='', editable=False)
 
     @property
     def temp_oper_prof(self) -> Profile:
@@ -157,6 +162,23 @@ class DcLine(BranchParent):
             self._temp_oper_prof.set(arr=val)
         else:
             raise Exception(str(type(val)) + 'not supported to be set into a temp_oper_prof')
+
+    @property
+    def locations(self) -> LineLocations:
+        """
+        Cost profile
+        :return: Profile
+        """
+        return self._locations
+
+    @locations.setter
+    def locations(self, val: Union[LineLocations, np.ndarray]):
+        if isinstance(val, LineLocations):
+            self._locations = val
+        elif isinstance(val, np.ndarray):
+            self._locations.set(data=val)
+        else:
+            raise Exception(str(type(val)) + 'not supported to be set into a locations')
 
     @property
     def R_corrected(self):
@@ -233,78 +255,6 @@ class DcLine(BranchParent):
 
                 data.append(obj)
         return data
-
-    def get_properties_dict(self, version=3):
-        """
-        Get json dictionary
-        :return:
-        """
-        if version == 2:
-            return {'id': self.idtag,
-                    'type': 'dc_line',
-                    'phases': 'ps',
-                    'name': self.name,
-                    'name_code': self.code,
-                    'bus_from': self.bus_from.idtag,
-                    'bus_to': self.bus_to.idtag,
-                    'active': self.active,
-                    'rate': self.rate,
-                    'r': self.R,
-                    'length': self.length,
-                    'base_temperature': self.temp_base,
-                    'operational_temperature': self.temp_oper,
-                    'alpha': self.alpha,
-                    'locations': []}
-        elif version == 3:
-            return {'id': self.idtag,
-                    'type': 'dc_line',
-                    'phases': 'ps',
-                    'name': self.name,
-                    'name_code': self.code,
-                    'bus_from': self.bus_from.idtag,
-                    'bus_to': self.bus_to.idtag,
-                    'active': self.active,
-                    'rate': self.rate,
-                    'contingency_factor1': self.contingency_factor,
-                    'contingency_factor2': self.contingency_factor,
-                    'contingency_factor3': self.contingency_factor,
-                    'r': self.R,
-                    'length': self.length,
-                    'base_temperature': self.temp_base,
-                    'operational_temperature': self.temp_oper,
-                    'alpha': self.alpha,
-
-                    'overload_cost': self.Cost,
-                    'capex': self.capex,
-                    'opex': self.opex,
-                    'build_status': str(self.build_status.value).lower(),
-                    'locations': []}
-        else:
-            return dict()
-
-    def get_profiles_dict(self, version=3):
-
-        if self.active_prof is not None:
-            active_prof = self.active_prof.tolist()
-            rate_prof = self.rate_prof.tolist()
-        else:
-            active_prof = list()
-            rate_prof = list()
-
-        return {'id': self.idtag,
-                'active': active_prof,
-                'rate': rate_prof}
-
-    def get_units_dict(self, version=3):
-        """
-        Get units of the values
-        """
-        return {'rate': 'MW',
-                'r': 'p.u.',
-                'length': 'km',
-                'base_temperature': 'ºC',
-                'operational_temperature': 'ºC',
-                'alpha': '1/ºC'}
 
     def plot_profiles(self, time_series=None, my_index=0, show_fig=True):
         """

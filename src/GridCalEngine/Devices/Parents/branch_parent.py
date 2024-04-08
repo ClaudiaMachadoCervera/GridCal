@@ -15,17 +15,17 @@
 # along with this program; if not, write to the Free Software Foundation,
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
-
-import pandas as pd
 import numpy as np
 from typing import Tuple, Union
-from matplotlib import pyplot as plt
 
 from GridCalEngine.basic_structures import Logger
+from GridCalEngine.Devices.Substation.substation import Substation
+from GridCalEngine.Devices.Substation.voltage_level import VoltageLevel
 from GridCalEngine.Devices.Substation.bus import Bus
 from GridCalEngine.Devices.Substation.connectivity_node import ConnectivityNode
 from GridCalEngine.enumerations import BuildStatus
 from GridCalEngine.Devices.Parents.editable_device import EditableDevice, DeviceType
+from GridCalEngine.Devices.Aggregation.branch_group import BranchGroup
 from GridCalEngine.Devices.profile import Profile
 
 
@@ -127,7 +127,7 @@ class BranchParent(EditableDevice):
         self._protection_rating_factor_prof = Profile(default_value=protection_rating_factor)
 
         # List of measurements
-        self.measurements = list()
+        self.group: Union[BranchGroup, None] = None
 
         self.register('bus_from', units="", tpe=DeviceType.BusDevice,
                       definition='Name of the bus at the "from" side', editable=False)
@@ -163,6 +163,8 @@ class BranchParent(EditableDevice):
                       definition="Branch build status. Used in expansion planning.")
         self.register('capex', units="e/MW", tpe=float, definition="Cost of investment. Used in expansion planning.")
         self.register('opex', units="e/MWh", tpe=float, definition="Cost of operation. Used in expansion planning.")
+        self.register('group', units="", tpe=DeviceType.BranchGroupDevice,
+                      definition="Group where this branch belongs")
 
     @property
     def bus_from_prof(self) -> Profile:
@@ -380,79 +382,6 @@ class BranchParent(EditableDevice):
             else:
                 return 1.0, 1.0
 
-    def get_properties_dict(self, version=3):
-        """
-        Get json dictionary
-        :return:
-        """
-        if version == 2:
-            return {'id': self.idtag,
-                    'type': 'line',
-                    'phases': 'ps',
-                    'name': self.name,
-                    'name_code': self.code,
-                    'bus_from': self.bus_from.idtag,
-                    'bus_to': self.bus_to.idtag,
-                    'active': self.active,
-
-                    'rate': self.rate,
-                    'locations': []
-                    }
-
-        elif version == 3:
-            return {'id': self.idtag,
-                    'type': 'line',
-                    'phases': 'ps',
-                    'name': self.name,
-                    'name_code': self.code,
-                    'bus_from': self.bus_from.idtag,
-                    'bus_to': self.bus_to.idtag,
-                    'active': self.active,
-
-                    'rate': self.rate,
-                    'contingency_factor1': self.contingency_factor,
-                    'contingency_factor2': self.contingency_factor,
-                    'contingency_factor3': self.contingency_factor,
-
-                    'overload_cost': self.Cost,
-                    'capex': self.capex,
-                    'opex': self.opex,
-                    'build_status': str(self.build_status.value).lower(),
-
-                    'locations': []
-                    }
-        else:
-            return dict()
-
-    def get_profiles_dict(self, version=3):
-        """
-
-        :return:
-        """
-        if self.active_prof is not None:
-            active_prof = self.active_prof.tolist()
-            rate_prof = self.rate_prof.tolist()
-        else:
-            active_prof = list()
-            rate_prof = list()
-
-        return {'id': self.idtag,
-                'active': active_prof,
-                'rate': rate_prof}
-
-    def get_units_dict(self, version=3):
-        """
-        Get units of the values
-        """
-        return {'rate': 'MW',
-                'r': 'p.u.',
-                'x': 'p.u.',
-                'b': 'p.u.',
-                'length': 'km',
-                'base_temperature': 'ºC',
-                'operational_temperature': 'ºC',
-                'alpha': '1/ºC'}
-
     def get_coordinates(self):
         """
         Get the line defining coordinates
@@ -477,11 +406,19 @@ class BranchParent(EditableDevice):
             return False
 
     @property
-    def Vf(self):
+    def Vf(self) -> float:
+        """
+        Get the voltage "from" (kV)
+        :return: get the nominal voltage from
+        """
         return self.bus_from.Vnom
 
     @property
-    def Vt(self):
+    def Vt(self) -> float:
+        """
+        Get the voltage "to" (kV)
+        :return: get the nominal voltage to
+        """
         return self.bus_to.Vnom
 
     def should_this_be_a_transformer(self, branch_connection_voltage_tolerance: float = 0.1) -> bool:
@@ -493,8 +430,11 @@ class BranchParent(EditableDevice):
         if self.bus_to is not None and self.bus_from is not None:
             V1 = min(self.bus_to.Vnom, self.bus_from.Vnom)
             V2 = max(self.bus_to.Vnom, self.bus_from.Vnom)
-            per = V1 / V2
-            return per < (1.0 - branch_connection_voltage_tolerance)
+            if V2 > 0:
+                per = V1 / V2
+                return per < (1.0 - branch_connection_voltage_tolerance)
+            else:
+                return V1 != V2
         else:
             return False
 
@@ -507,3 +447,43 @@ class BranchParent(EditableDevice):
         :return:
         """
         pass
+
+    def get_substation_from(self) -> Union[Substation, None]:
+        """
+        Try to get the substation at the From side
+        :return: Union[Substation, None]
+        """
+        if self.bus_from is not None:
+            return self.bus_from.substation
+        else:
+            return None
+
+    def get_substation_to(self) -> Union[Substation, None]:
+        """
+        Try to get the substation at the To side
+        :return: Union[Substation, None]
+        """
+        if self.bus_to is not None:
+            return self.bus_to.substation
+        else:
+            return None
+
+    def get_voltage_level_from(self) -> Union[VoltageLevel, None]:
+        """
+        Try to get the voltage level at the From side
+        :return: Union[VoltageLevel, None]
+        """
+        if self.bus_from is not None:
+            return self.bus_from.voltage_level
+        else:
+            return None
+
+    def get_voltage_level_to(self) -> Union[VoltageLevel, None]:
+        """
+        Try to get the voltage level at the To side
+        :return: Union[VoltageLevel, None]
+        """
+        if self.bus_to is not None:
+            return self.bus_to.voltage_level
+        else:
+            return None

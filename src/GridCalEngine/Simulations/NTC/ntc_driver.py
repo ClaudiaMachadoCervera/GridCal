@@ -22,6 +22,7 @@ from GridCalEngine.Simulations.driver_types import SimulationTypes
 from GridCalEngine.Simulations.driver_template import DriverTemplate
 from GridCalEngine.Simulations.NTC.ntc_options import OptimalNetTransferCapacityOptions
 from GridCalEngine.Simulations.NTC.ntc_results import OptimalNetTransferCapacityResults
+from GridCalEngine.Simulations.PowerFlow.power_flow_options import PowerFlowOptions
 from GridCalEngine.basic_structures import Logger
 
 
@@ -29,21 +30,18 @@ class OptimalNetTransferCapacityDriver(DriverTemplate):
     name = 'Optimal net transfer capacity'
     tpe = SimulationTypes.OPF_NTC_run
 
-    def __init__(self, grid: MultiCircuit,
-                 options: OptimalNetTransferCapacityOptions,
-                 pf_options: "PowerFlowOptions"):
+    def __init__(self,
+                 grid: MultiCircuit,
+                 options: OptimalNetTransferCapacityOptions):
         """
         PowerFlowDriver class constructor
         :param grid: MultiCircuit Object
         :param options: OptimalNetTransferCapacityOptions
-        :param pf_options: PowerFlowOptions
         """
         DriverTemplate.__init__(self, grid=grid)
 
         # Options to use
-        self.options = options
-
-        self.pf_options = pf_options
+        self.options: OptimalNetTransferCapacityOptions = options
 
         self.all_solved = True
 
@@ -68,22 +66,23 @@ class OptimalNetTransferCapacityDriver(DriverTemplate):
         opf_vars = run_linear_ntc_opf_ts(
             grid=self.grid,
             time_indices=None,
-            solver_type=self.options.mip_solver,
-            zonal_grouping=self.options.zonal_grouping,
+            solver_type=self.options.opf_options.mip_solver,
+            zonal_grouping=self.options.opf_options.zonal_grouping,
             skip_generation_limits=self.options.skip_generation_limits,
             consider_contingencies=self.options.consider_contingencies,
-            alpha_threshold=self.options.branch_sensitivity_threshold,
-            lodf_threshold=self.options.lodf_tolerance,
+            lodf_threshold=self.options.lin_options.lodf_threshold,
             buses_areas_1=self.options.area_from_bus_idx,
             buses_areas_2=self.options.area_to_bus_idx,
             transfer_method=self.options.transfer_method,
-            monitor_only_ntc_load_rule_branches=self.options.monitor_only_ntc_load_rule_branches,
-            monitor_only_sensitive_branches=self.options.monitor_only_sensitive_branches,
-            ntc_load_rule=self.options.ntc_load_rule,
+            monitor_only_ntc_load_rule_branches=self.options.use_branch_rating_contribution,
+            alpha_threshold=self.options.branch_exchange_sensitivity,
+            monitor_only_sensitive_branches=self.options.use_branch_exchange_sensitivity,
+            ntc_load_rule=self.options.branch_rating_contribution,
             logger=self.logger,
             progress_text=self.report_text,
             progress_func=self.report_progress,
-            export_model_fname=None)
+            export_model_fname=self.options.opf_options.export_model_fname
+        )
 
         inter_area_branches = self.grid.get_inter_areas_branches(a1=self.options.area_from_bus_idx,
                                                                  a2=self.options.area_to_bus_idx)
@@ -99,8 +98,8 @@ class OptimalNetTransferCapacityDriver(DriverTemplate):
             generator_names=self.grid.get_generator_names(),
             battery_names=self.grid.get_battery_names(),
             hvdc_names=self.grid.get_hvdc_names(),
-            trm=self.options.trm,
-            ntc_load_rule=self.options.ntc_load_rule,
+            trm=self.options.transmission_reliability_margin,
+            ntc_load_rule=self.options.branch_rating_contribution,
             Sbus=opf_vars.bus_vars.Pcalc[0, :],
             voltage=opf_vars.get_voltages()[0, :],
             Sf=opf_vars.branch_vars.flows[0, :],
@@ -133,7 +132,7 @@ class OptimalNetTransferCapacityDriver(DriverTemplate):
             # structural_ntc=problem.structural_ntc,
             sbase=self.grid.Sbase,
             loading_threshold=self.options.loading_threshold_to_report,
-            reversed_sort_loading=self.options.reversed_sort_loading,
+            reversed_sort_loading=False,
             branch_control_modes=[],
             hvdc_control_modes=[],
         )

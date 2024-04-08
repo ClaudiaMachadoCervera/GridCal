@@ -334,15 +334,7 @@ class Profile:
 
         if isinstance(other, (int, float)):
 
-            if self._is_sparse:
-
-                # Scale the map
-                self._sparse_array._map = {key: val * other
-                                           for key, val in self._sparse_array.get_map().items()}
-            else:
-
-                # Scale the dense array
-                self._dense_array *= other
+            self.scale(value=other)
 
         else:
             raise TypeError("Unsupported type {}".format(type(other)))
@@ -399,6 +391,21 @@ class Profile:
         self._dense_array = None
         self._dtype = type(value)
 
+    def scale(self, value: Union[float, int]):
+        """
+        Scale this profile with the same value
+        :param value: any value
+        """
+        if self._is_sparse:
+
+            # Scale the map
+            self._sparse_array._map = {key: val * value
+                                       for key, val in self._sparse_array.get_map().items()}
+        else:
+
+            # Scale the dense array
+            self._dense_array *= value
+
     def size(self) -> int:
         """
         Get the size
@@ -414,10 +421,13 @@ class Profile:
         Get dense numpy array representation
         :return: NumericVec
         """
-        if self._is_sparse:
-            return self._sparse_array.toarray()
+        if self.size() > 0:
+            if self._is_sparse:
+                return self._sparse_array.toarray()
+            else:
+                return self._dense_array
         else:
-            return self._dense_array
+            return np.zeros(0)
 
     def tolist(self) -> List[Union[int, float]]:
         """

@@ -381,7 +381,6 @@ class ContingencyResultsReport:
         df["SRAP Power (MW)"] = df["SRAP Power (MW)"].astype(float)
         df["Solved with SRAP"] = df["Solved with SRAP"].astype(bool)
 
-
         # If we are analyzing a base case, we report base case
         # If we are analyzing an overload due to a contingency (not in base), we report:
         # --- If 'SRAP applicable' we report "Post-SRAP loading (pu)"
@@ -397,10 +396,20 @@ class ContingencyResultsReport:
 
         df["Overload for reporting weighted with cluster"] = df["Overload for reporting"]*df["Probability cluster"]
 
+        # Count the number of Hours the monitored line appears
+
+        df_ = df[["Time idx", "Monitored", "Probability cluster"]].drop_duplicates()
+        df_monit_time_pu = pd.pivot_table(df_, values='Probability cluster', index="Monitored", aggfunc="sum")
+        df_monit_time_clust = pd.pivot_table(df_, values='Probability cluster', index="Monitored", aggfunc="count")
+
+        df['Time this line is monitored by any contingency (pu)'] = df['Monitored'].map(df_monit_time_pu['Probability cluster'])
+        df['Number of clusters this line is monitored'] = df['Monitored'].map(df_monit_time_clust['Probability cluster'])
+
+
         # Group de columns by Area1, Area2, Monitored, Contingency
         df_grp = df.groupby(
             ["Area 1", "Area 2", "Monitored", "Contingency", "Base rating (MW)", "Contingency rating (MW)",
-             "SRAP rating (MW)"])
+             "SRAP rating (MW)","Time this line is monitored by any contingency (pu)","Number of clusters this line is monitored"])
 
         # Compute the columns
         ov_max = df_grp["Overload for reporting"].max()
@@ -421,9 +430,8 @@ class ContingencyResultsReport:
 
         #new, work in progress
         ov_avg_clust = df_grp["Overload for reporting weighted with cluster"].sum()/df_grp["Probability cluster"].sum() #checked
-
         ov_desvest_clust = df_grp["Overload for reporting weighted with cluster"].std()/df_grp["Probability cluster"].sum()
-        ov_desvest_clust = ov_desvest_clust.fillna(0)
+
 
         # Create the new dataframe with the columns we need
         df_summary = pd.DataFrame({
@@ -431,24 +439,43 @@ class ContingencyResultsReport:
             "Area 2": ov_max.index.get_level_values("Area 2"),
             "Monitored": ov_max.index.get_level_values("Monitored"),
             "Contingency": ov_max.index.get_level_values("Contingency"),
+
+            "Area 1": ov_max.index.get_level_values("Area 1"),
+            "Area 2": ov_max.index.get_level_values("Area 2"),
+
+            "Monitored": ov_max.index.get_level_values("Monitored"),
+            "Contingency": ov_max.index.get_level_values("Contingency"),
+
             "Base rating (MW)": ov_max.index.get_level_values("Base rating (MW)"),
             "Contingency rating (MW)": ov_max.index.get_level_values("Contingency rating (MW)"),
             "SRAP rating (MW)": ov_max.index.get_level_values("SRAP rating (MW)"),
 
             "Overload max (pu)": ov_max.values,
             "Date Overload max": ov_max_dates,
+
+            "Overload average weighting time (pu)": ov_avg_clust.values,
+            "Annual time the Monitored line is overloaded by this contingency (pu)": ov_time_pu.values,
+
+            "Time this line is monitored by any contingency (pu)": ov_max.index.get_level_values(
+                "Time this line is monitored by any contingency (pu)"),
+            "Number of clusters this line is monitored": ov_max.index.get_level_values(
+                "Number of clusters this line is monitored"),
+
             "Overload average for clusters(pu)": ov_avg.values,
             "Standard deviation for clusters(pu)": ov_desvest.values,
-            "Number of clusters with this overload (h)": ov_count_clusters.values,
-
-            # new, work in progress
-            "Overload average weighting time (pu)": ov_avg_clust.values, #checked
-            "Annual time this overload happens (pu)": ov_time_pu.values, #checked
-            "Standard deviation weighting time(pu)": ov_desvest_clust.values,
+            "Number of clusters with this overload (h)": ov_count_clusters.values.astype(int)
 
         })
 
         df_summary = df_summary.sort_values(by="Contingency", ascending=False)
+
+        cols_1dec = ["Number of clusters this line is monitored","Number of clusters with this overload (h)"]
+        cols_2dec = ["Base rating (MW)","Contingency rating (MW)","SRAP rating (MW)"]
+        cols_4dec = ["Overload max (pu)","Overload average weighting time (pu)","Annual time the Monitored line is overloaded by this contingency (pu)","Time this line is monitored by any contingency (pu)","Overload average for clusters(pu)","Standard deviation for clusters(pu)"]
+
+        df_summary[cols_1dec]=df_summary[cols_1dec].map(lambda x:f'{x:.1f}')
+        df_summary[cols_2dec] = df_summary[cols_2dec].map(lambda x: f'{x:.2f}')
+        df_summary[cols_4dec] = df_summary[cols_4dec].map(lambda x: f'{x:.4f}')
 
         return df_summary
 

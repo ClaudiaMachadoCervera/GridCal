@@ -119,6 +119,16 @@ class CimExporter:
         xmlstr = xml.dom.minidom.parseString(Et.tostring(root)).toprettyxml(indent="   ")
         stream.write(xmlstr.encode('utf-8'))
 
+    def is_in_profile(self, instance_profiles, model_profile):
+        if isinstance(instance_profiles, list):
+            for profile in instance_profiles:
+                if profile in self.profile_uris[model_profile]:
+                    return True
+        else:
+            if instance_profiles in self.profile_uris[model_profile]:
+                return True
+        return False
+
     def generate_full_model_elements(self, profile):
         full_model_elements = []
         filter_props = {"scenarioTime": "str",
@@ -132,17 +142,31 @@ class CimExporter:
                         "description": "str"}
 
         for instance in self.cgmes_circuit.FullModel_list:
-            instance_dict = instance.__dict__
-            if instance_dict.get("profile") in self.profile_uris[profile]:
+            instance_dict = instance.parsed_properties
+            if self.is_in_profile(instance_profiles=instance_dict.get("profile"), model_profile=profile):
                 element = Et.Element("md:FullModel", {"rdf:about": "urn:uuid:" + instance.rdfid})
                 for attr_name, attr_value in instance_dict.items():
                     if attr_name not in filter_props or attr_value is None:
                         continue
                     child = Et.Element(f"md:Model.{attr_name}")
                     if filter_props.get(attr_name) == "Association":
-                        child.attrib = {"rdf:resource": "urn:uuid:" + attr_value}
+                        if isinstance(attr_value, list):
+                            for v in attr_value:
+                                child = Et.Element(f"md:Model.{attr_name}")
+                                child.attrib = {"rdf:resource": "urn:uuid:" + v}
+                                element.append(child)
+                            continue
+                        else:
+                            child.attrib = {"rdf:resource": "urn:uuid:" + attr_value}
                     else:
-                        child.text = str(attr_value)
+                        if isinstance(attr_value, list):
+                            for v in attr_value:
+                                child = Et.Element(f"md:Model.{attr_name}")
+                                child.text = str(v)
+                                element.append(child)
+                            continue
+                        else:
+                            child.text = str(attr_value)
                     element.append(child)
                 full_model_elements.append(element)
         return full_model_elements
@@ -183,7 +207,14 @@ class CimExporter:
                         prop_text = "cim:" + prop_split[-1]
                     child = Et.Element(prop_text)
                     if attr_type == "Association":
-                        child.attrib = {"rdf:resource": "#_" + attr_value.rdfid}
+                        if isinstance(attr_value, list):
+                            for v in attr_value:
+                                child = Et.Element(prop_text)
+                                child.attrib = {"rdf:resource": "#_" + v.rdfid}
+                                element.append(child)
+                            continue
+                        else:
+                            child.attrib = {"rdf:resource": "#_" + attr_value.rdfid}
                     elif attr_type == "Enumeration":
                         enum_dict_key = profile
                         enum_dict_value = self.enum_dict.get(enum_dict_key)
@@ -192,7 +223,14 @@ class CimExporter:
                     elif attr_type == "Attribute":
                         if isinstance(attr_value, bool):
                             attr_value = str(attr_value).lower()
-                        child.text = str(attr_value)
+                        if isinstance(attr_value, list):
+                            for v in attr_value:
+                                child = Et.Element(prop_text)
+                                child.text = str(v)
+                                element.append(child)
+                            continue
+                        else:
+                            child.text = str(attr_value)
                     element.append(child)
                 other_elements.append(element)
         return other_elements

@@ -17,13 +17,63 @@
 import json
 import os
 import qdarktheme
-from typing import Dict, Union
+from typing import Dict, Union, Any
 from PySide6 import QtWidgets
 
 from GridCalEngine.IO.file_system import get_create_gridcal_folder
 from GridCal.Gui.Main.SubClasses.Results.results import ResultsMain
-from GridCal.Gui.BusBranchEditorWidget import BusBranchEditorWidget
-from GridCal.Gui.BusBranchEditorWidget.generic_graphics import set_dark_mode, set_light_mode
+from GridCal.Gui.Diagrams.DiagramEditorWidget.diagram_editor_widget import DiagramEditorWidget
+from GridCal.Gui.Diagrams.DiagramEditorWidget.generic_graphics import set_dark_mode, set_light_mode
+
+
+def config_data_to_struct(data_: Dict[str, Union[Dict[str, Any], str, Any]],
+                          struct_: Dict[str, Dict[str, Any]]) -> None:
+    """
+    Recursive function to set the GUI objects' values from the config dictionary
+    :param data_: config dictionary with values from the file
+    :param struct_: result of self.get_config_structure()
+    """
+    for key, object_to_set in struct_.items():
+
+        # get the value in data_ that corresponds to the object to be set
+        corresponding_data = data_.get(key, None)
+
+        if corresponding_data is not None:
+
+            # print("config debug:", key, corresponding_data)
+
+            if isinstance(object_to_set, dict):
+                config_data_to_struct(corresponding_data, object_to_set)
+
+            elif isinstance(object_to_set, QtWidgets.QComboBox):
+                index = object_to_set.findText(corresponding_data)
+                if -1 < index < object_to_set.count():
+                    object_to_set.setCurrentIndex(index)
+
+            elif isinstance(object_to_set, QtWidgets.QDoubleSpinBox):
+                object_to_set.setValue(float(corresponding_data))
+
+            elif isinstance(object_to_set, QtWidgets.QSpinBox):
+                object_to_set.setValue(int(corresponding_data))
+
+            elif isinstance(object_to_set, QtWidgets.QCheckBox):
+                object_to_set.setChecked(bool(corresponding_data))
+
+            elif isinstance(object_to_set, QtWidgets.QRadioButton):
+                object_to_set.setChecked(bool(corresponding_data))
+
+            elif isinstance(object_to_set, str):
+                pass
+            elif isinstance(object_to_set, float):
+                pass
+            elif isinstance(object_to_set, int):
+                pass
+            elif isinstance(object_to_set, bool):
+                pass
+            else:
+                raise Exception('unknown structure')
+        else:
+            print(f"{key} has no entry in config")
 
 
 class ConfigurationMain(ResultsMain):
@@ -43,21 +93,26 @@ class ConfigurationMain(ResultsMain):
         # check boxes
         self.ui.dark_mode_checkBox.clicked.connect(self.change_theme_mode)
 
+        # buttons
+        self.ui.selectCGMESBoundarySetButton.clicked.connect(self.select_cgmes_boundary_set)
+
     def change_theme_mode(self) -> None:
         """
         Change the GUI theme
-        :return:
         """
         custom_colors = {"primary": "#00aa88ff",
                          "primary>list.selectionBackground": "#00aa88be"}
 
         if self.ui.dark_mode_checkBox.isChecked():
             set_dark_mode()
-            qdarktheme.setup_theme(theme='dark', custom_colors=custom_colors)
+            qdarktheme.setup_theme(theme='dark',
+                                   custom_colors=custom_colors,
+                                   additional_qss="QToolTip {color: white; background-color: black; border: 0px; }")
+            # note: The 0px border on the tooltips allow it to render properly
 
             diagram = self.get_selected_diagram_widget()
             if diagram is not None:
-                if isinstance(diagram, BusBranchEditorWidget):
+                if isinstance(diagram, DiagramEditorWidget):
                     diagram.set_dark_mode()
 
             self.colour_diagrams()
@@ -66,11 +121,14 @@ class ConfigurationMain(ResultsMain):
                 self.console.set_dark_theme()
         else:
             set_light_mode()
-            qdarktheme.setup_theme(theme='light', custom_colors=custom_colors)
+            qdarktheme.setup_theme(theme='light',
+                                   custom_colors=custom_colors,
+                                   additional_qss="QToolTip {color: black; background-color: white; border: 0px;}")
+            # note: The 0px border on the tooltips allow it to render properly
 
             diagram = self.get_selected_diagram_widget()
             if diagram is not None:
-                if isinstance(diagram, BusBranchEditorWidget):
+                if isinstance(diagram, DiagramEditorWidget):
                     diagram.set_light_mode()
 
             self.colour_diagrams()
@@ -139,11 +197,7 @@ class ConfigurationMain(ResultsMain):
                 }
             },
             "linear": {
-                "perturbance_power": self.ui.atcPerturbanceSpinBox,
-                "transfer_sensitivity_threshold": self.ui.atcThresholdSpinBox,
-                "transfer_method": self.ui.transferMethodComboBox,
-                "Loading_threshold_to_report": self.ui.ntcReportLoadingThresholdSpinBox,
-                "consider_contingencies": self.ui.n1ConsiderationCheckBox,
+
                 "ptdf_threshold": self.ui.ptdf_threshold_doubleSpinBox,
                 "lodf_threshold": self.ui.lodf_threshold_doubleSpinBox
             },
@@ -202,26 +256,21 @@ class ConfigurationMain(ResultsMain):
                 "available_transfer_capacity": self.ui.atcRadioButton,
             },
             "net_transfer_capacity": {
-                "proportional_redispatch": self.ui.proportionalRedispatchRadioButton,
-                "optimal_redispatch": self.ui.optimalRedispatchRadioButton,
-                "skip_generation_limits": self.ui.skipNtcGenerationLimitsCheckBox,
-                "dispatch_all_areas": self.ui.ntcDispatchAllAreasCheckBox,
-                "check_feasibility": self.ui.ntcFeasibilityCheckCheckBox,
+                "transfer_sensitivity_threshold": self.ui.atcThresholdSpinBox,
+                "transfer_method": self.ui.transferMethodComboBox,
+                "Loading_threshold_to_report": self.ui.ntcReportLoadingThresholdSpinBox,
+                "ntc_linear_consider_contingencies": self.ui.n1ConsiderationCheckBox,
 
-                "ntc_lodf_tolerance": self.ui.ntcLODFToleranceSpinBox,
+                "skip_generation_limits": self.ui.skipNtcGenerationLimitsCheckBox,
                 "transmission_reliability_margin": self.ui.trmSpinBox,
 
+                "use_branch_exchange_sensitivity": self.ui.ntcSelectBasedOnExchangeSensitivityCheckBox,
                 "branch_exchange_sensitivity": self.ui.ntcAlphaSpinBox,
+
+                "use_branch_rating_contribution": self.ui.ntcSelectBasedOnAcerCriteriaCheckBox,
                 "branch_rating_contribution": self.ui.ntcLoadRuleSpinBox,
 
-                "consider_branch_contingencies": self.ui.considerContingenciesNtcOpfCheckBox,
-                "consider_hvdc_contingencies": self.ui.considerContingenciesHvdcOpfCheckBox,
-                "consider_generator_contingencies": self.ui.considerContingenciesGeneratorOpfCheckBox,
-                "generator_contingency_power": self.ui.contingencyGenerationThresholdDoubleSpinBox,
-
-                "power_shift_weight": self.ui.weightPowerShiftSpinBox,
-                "generation_cost_weight": self.ui.weightGenCostSpinBox,
-                "branch_overload_weight": self.ui.weightsOverloadsSpinBox,
+                "ntc_opt_consider_contingencies": self.ui.consider_ntc_contingencies_checkBox,
             },
             "general": {
                 "base_power": self.ui.sbase_doubleSpinBox,
@@ -240,7 +289,8 @@ class ConfigurationMain(ResultsMain):
                 "contingency_massive_report": self.ui.contingency_detailed_massive_report_checkBox
             },
             "file": {
-                "store_results_in_file": self.ui.saveResultsCheckBox
+                "store_results_in_file": self.ui.saveResultsCheckBox,
+                "current_boundary_set": self.current_boundary_set
             }
         }
 
@@ -250,8 +300,9 @@ class ConfigurationMain(ResultsMain):
         :return:
         """
 
-        def struct_to_data(data_: Dict[str, Union[float, int, str, bool, Dict[str, Union[float, int, str, bool, Dict]]]],
-                           struct_: Dict[str, Dict[str, any]]):
+        def struct_to_data(
+                data_: Dict[str, Union[float, int, str, bool, Dict[str, Union[float, int, str, bool, Dict]]]],
+                struct_: Dict[str, Dict[str, any]]):
             """
             Recursive function to get the config dictionary from the GUI values
             :param data_: Dictionary to fill
@@ -271,8 +322,16 @@ class ConfigurationMain(ResultsMain):
                     data_[key] = value.isChecked()
                 elif isinstance(value, QtWidgets.QRadioButton):
                     data_[key] = value.isChecked()
+                elif isinstance(value, str):
+                    data_[key] = value
+                elif isinstance(value, int):
+                    data_[key] = value
+                elif isinstance(value, float):
+                    data_[key] = value
+                elif isinstance(value, bool):
+                    data_[key] = value
                 else:
-                    raise Exception('unknown structure')
+                    raise Exception(f'unknown structure {value}')
 
         struct = self.get_config_structure()
         data = dict()
@@ -289,43 +348,31 @@ class ConfigurationMain(ResultsMain):
         with open(self.config_file_path(), "w") as f:
             f.write(json.dumps(data, indent=4))
 
-    def apply_gui_config(self, data: dict):
+    def apply_gui_config(self, data: Dict[str, Dict[str, Any]]):
         """
         Apply GUI configuration dictionary
         :param data: GUI configuration dictionary
         """
 
-        def data_to_struct(data_, struct_):
-            """
-            Recursive function to set the GUI values from the config dictionary
-            :param data_: config dictionary with values from the file
-            :param struct_: result of self.get_config_structure()
-            """
-            for key, instance in struct_.items():
-                if key in data_:
-                    if isinstance(instance, dict):
-                        data_to_struct(data_[key], instance)
-                    elif isinstance(instance, QtWidgets.QComboBox):
-                        val = data_[key]
-                        index = instance.findText(val)
-                        if -1 < index < instance.count():
-                            instance.setCurrentIndex(index)
-                    elif isinstance(instance, QtWidgets.QDoubleSpinBox):
-                        instance.setValue(float(data_[key]))
-                    elif isinstance(instance, QtWidgets.QSpinBox):
-                        instance.setValue(int(data_[key]))
-                    elif isinstance(instance, QtWidgets.QCheckBox):
-                        instance.setChecked(bool(data_[key]))
-                    elif isinstance(instance, QtWidgets.QRadioButton):
-                        instance.setChecked(bool(data_[key]))
-                    else:
-                        raise Exception('unknown structure')
-                else:
-                    print(key)
-
         struct = self.get_config_structure()
-        data_to_struct(data_=data, struct_=struct)
+        config_data_to_struct(data_=data, struct_=struct)
 
+        # CGMES boundary set
+
+        """
+        "file": {
+                "store_results_in_file": self.ui.saveResultsCheckBox,
+                "current_boundary_set": self.current_boundary_set 
+            }
+        """
+
+        file_data: Dict[str, Any] = data.get("file", None)
+        if file_data is not None:
+            bd_path = file_data.get("current_boundary_set", "")
+            self.current_boundary_set = bd_path if os.path.exists(bd_path) else ""
+            self.ui.cgmes_boundary_set_label.setText(self.current_boundary_set)
+
+        # light / dark mode
         if self.ui.dark_mode_checkBox.isChecked():
             set_dark_mode()
         else:
@@ -337,6 +384,29 @@ class ConfigurationMain(ResultsMain):
         """
         if self.config_file_exists():
             with open(self.config_file_path(), "r") as f:
-                data = json.load(f)
-                self.apply_gui_config(data=data)
-                self.change_theme_mode()
+                try:
+                    data = json.load(f)
+                    self.apply_gui_config(data=data)
+                    self.change_theme_mode()
+                except json.decoder.JSONDecodeError as e:
+                    print(e)
+                    self.save_gui_config()
+                    print("Config file was erroneous, wrote a new one")
+
+    def select_cgmes_boundary_set(self):
+        """
+        Select the current boundary set
+        """
+        files_types = ("Boundary set (*.zip)")
+
+        dialogue = QtWidgets.QFileDialog(None,
+                                         caption='Select Boundary set file',
+                                         directory=self.project_directory,
+                                         filter=files_types)
+        # dialogue.setOption(QtWidgets.QFileDialog.Option.DontUseNativeDialog, True)
+
+        if dialogue.exec():
+            filenames = dialogue.selectedFiles()
+            if len(filenames) > 0:
+                self.current_boundary_set = filenames[0]
+                self.ui.cgmes_boundary_set_label.setText(self.current_boundary_set)

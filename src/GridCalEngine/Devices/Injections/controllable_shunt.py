@@ -43,6 +43,7 @@ class ControllableShunt(InjectionParent):
                  mttr: float = 0.0,
                  capex: float = 0.0,
                  opex: float = 0.0,
+                 is_controlled: bool = True,
                  build_status: BuildStatus = BuildStatus.Commissioned):
         """
         The controllable shunt object implements the so-called ZIP model, in which the load can be
@@ -71,12 +72,13 @@ class ControllableShunt(InjectionParent):
                                  build_status=build_status,
                                  device_type=DeviceType.ControllableShuntDevice)
 
+        self.is_controlled = is_controlled
         self.is_nonlinear = is_nonlinear
         self._g_steps = np.zeros(number_of_steps)
         self._b_steps = np.zeros(number_of_steps)
 
         # regardless of the linear / nonlinear type, we always store
-        # the cummulative values because the query is faster
+        # the cumulative values because the query is faster
         for i in range(number_of_steps):
             self._g_steps[i] = g_per_step * (i + 1)
             self._b_steps[i] = b_per_step * (i + 1)
@@ -86,6 +88,15 @@ class ControllableShunt(InjectionParent):
 
         self.register(key='step', units='', tpe=int, definition='Device tap step', profile_name='step_prof')
         self.register(key='is_nonlinear', units='', tpe=bool, definition='Is non-linear?')
+        self.register(key='is_controlled', units='', tpe=bool, definition='Is controlled?')
+
+    @property
+    def Bmin(self):
+        return self._b_steps[0]
+
+    @property
+    def Bmax(self):
+        return self._b_steps[-1]
 
     @property
     def g_steps(self):
@@ -173,52 +184,6 @@ class ControllableShunt(InjectionParent):
             self._step_prof.set(arr=val)
         else:
             raise Exception(str(type(val)) + 'not supported to be set into a step_prof')
-
-    def get_properties_dict(self, version=3):
-        """
-        Get json dictionary
-        :return:
-        """
-        if version in [2, 3]:
-            return {'id': self.idtag,
-                    'type': 'load',
-                    'phases': 'ps',
-                    'name': self.name,
-                    'name_code': self.code,
-                    'bus': self.bus.idtag,
-                    'active': bool(self.active),
-                    'g_steps': self._g_steps.tolist(),
-                    'b_steps': self._b_steps.tolist(),
-                    'step': self.step,
-                    'shedding_cost': self.Cost
-                    }
-        else:
-            return dict()
-
-    def get_profiles_dict(self, version=3):
-        """
-
-        :return:
-        """
-
-        if self.active_prof is not None:
-            active_profile = self.active_prof.tolist()
-            steps_prof = self.step_prof.tolist()
-
-        else:
-            active_profile = list()
-            steps_prof = list()
-
-        return {'id': self.idtag,
-                'active': active_profile,
-                'step': steps_prof,
-                }
-
-    def get_units_dict(self, version=3):
-        """
-        Get units of the values
-        """
-        return {}
 
     def plot_profiles(self, time=None, show_fig=True):
         """

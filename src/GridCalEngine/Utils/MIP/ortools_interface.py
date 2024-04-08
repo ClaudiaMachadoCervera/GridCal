@@ -29,6 +29,7 @@ from ortools.linear_solver.python.model_builder import LinearConstraint as LpCst
 from ortools.linear_solver.python.model_builder import LinearExpr as LpExp
 from ortools.linear_solver.python.model_builder import Variable as LpVar
 from ortools.linear_solver.python.model_builder import _Sum as LpSum
+from ortools.init.python import init
 from GridCalEngine.enumerations import MIPSolvers
 from GridCalEngine.basic_structures import Logger
 
@@ -38,6 +39,7 @@ def get_available_mip_solvers() -> List[str]:
     Get a list of candidate solvers
     :return:
     """
+    init.CppBridge.init_logging("")  # this avoids displaying all the solver logger information
     candidates = ['SCIP', 'CBC', 'CPLEX', 'GUROBI', 'XPRESS', 'HIGHS', 'GLOP']
     res = list()
     for c in candidates:
@@ -54,8 +56,9 @@ def set_var_bounds(var: LpVar, lb: float, ub: float):
     :param lb: lower bound value
     :param ub: upper bound value
     """
-    var.lower_bound = lb
-    var.upper_bound = ub
+    if isinstance(var, LpVar):
+        var.lower_bound = lb
+        var.upper_bound = ub
 
 
 class LpModel:
@@ -180,7 +183,6 @@ class LpModel:
                 slacks = list()
                 debugging_f_obj = 0
                 for i, cst in enumerate(debug_model.get_linear_constraints()):
-
                     # create a new slack var in the problem
                     sl = debug_model.new_var(0, 1e20, is_integer=False, name='Slackkk{}'.format(i))
 
@@ -216,7 +218,6 @@ class LpModel:
                         val = self.solver.value(sl)
 
                         if val > 1e-10:
-
                             # add the slack in the main model
                             sl2 = self.model.new_var(0, 1e20, is_integer=False, name='Slackkk{}'.format(i))
                             self.relaxed_slacks.append((i, sl2, 0.0))  # the 0.0 value will be read later

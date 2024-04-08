@@ -36,34 +36,40 @@ from GridCalEngine.Simulations.LinearFactors.linear_analysis import LinearAnalys
 from GridCalEngine.Simulations.ATC.available_transfer_capacity_driver import compute_alpha
 
 
-def get_structural_ntc(inter_area_branches, inter_area_hvdcs, branch_ratings, hvdc_ratings):
-    '''
+# def get_structural_ntc(inter_area_branches, inter_area_hvdcs, branch_ratings, hvdc_ratings):
+#     """
+#
+#     :param inter_area_branches:
+#     :param inter_area_hvdcs:
+#     :param branch_ratings:
+#     :param hvdc_ratings:
+#     :return:
+#     """
+#     if len(inter_area_branches):
+#         idx_branch, b = list(zip(*inter_area_branches))
+#         idx_branch = list(idx_branch)
+#         sum_ratings = sum(branch_ratings[idx_branch])
+#     else:
+#         sum_ratings = 0.0
+#
+#     if len(inter_area_hvdcs):
+#         idx_hvdc, b = list(zip(*inter_area_hvdcs))
+#         idx_hvdc = list(idx_hvdc)
+#         sum_ratings += sum(hvdc_ratings[idx_hvdc])
+#
+#     return sum_ratings
 
-    :param inter_area_branches:
-    :param inter_area_hvdcs:
-    :param branch_ratings:
-    :param hvdc_ratings:
-    :return:
-    '''
-    if len(inter_area_branches):
-        idx_branch, b = list(zip(*inter_area_branches))
-        idx_branch = list(idx_branch)
-        sum_ratings = sum(branch_ratings[idx_branch])
-    else:
-        sum_ratings = 0.0
 
-    if len(inter_area_hvdcs):
-        idx_hvdc, b = list(zip(*inter_area_hvdcs))
-        idx_hvdc = list(idx_hvdc)
-        sum_ratings += sum(hvdc_ratings[idx_hvdc])
-
-    return sum_ratings
-
-
-def formulate_monitorization_logic(
-        monitor_only_sensitive_branches: bool, monitor_only_ntc_load_rule_branches: bool,
-        monitor_loading: BoolVec, alpha: Vec, alpha_n1: Vec, branch_sensitivity_threshold: float,
-        base_flows: Vec, structural_ntc: float, ntc_load_rule: float, rates: Vec) -> Tuple[BoolVec, StrVec, Vec, Vec]:
+def formulate_monitorization_logic(monitor_only_sensitive_branches: bool,
+                                   monitor_only_ntc_load_rule_branches: bool,
+                                   monitor_loading: BoolVec,
+                                   alpha: Vec,
+                                   alpha_n1: Vec,
+                                   branch_sensitivity_threshold: float,
+                                   base_flows: Vec,
+                                   structural_ntc: float,
+                                   ntc_load_rule: float,
+                                   rates: Vec) -> Tuple[BoolVec, StrVec, Vec, Vec]:
     """
     Function to formulate branch monitor status due the given logic
     :param monitor_only_sensitive_branches: boolean to apply sensitivity threshold to the monitorization logic.
@@ -223,6 +229,13 @@ def get_transfer_power_scaling_per_bus(bus_data_t: BusData,
 def get_sensed_proportions(power: Vec,
                            idx: IntVec,
                            logger: Logger) -> Vec:
+    """
+
+    :param power:
+    :param idx:
+    :param logger:
+    :return:
+    """
     nelem = len(power)
 
     # bus area mask
@@ -420,6 +433,13 @@ class BranchNtcVars:
         """
         self.contingency_flow_data.append((t, m, c, flow_var, neg_slack, pos_slack))
 
+    def get_total_flow_slack(self):
+        """
+        Get total flow slacks
+        :return:
+        """
+        return self.flow_slacks_pos - self.flow_slacks_neg
+
 
 class HvdcNtcVars:
     """
@@ -496,6 +516,8 @@ class NtcVars:
     def get_values(self, Sbase: float, model: LpModel) -> "NtcVars":
         """
         Return an instance of this class where the arrays content are not LP vars but their value
+        :param Sbase
+        :param model:
         :return: OpfVars instance
         """
 
@@ -526,6 +548,10 @@ class NtcVars:
         return data
 
     def get_voltages(self) -> CxMat:
+        """
+
+        :return:
+        """
         return np.ones((self.nt, self.nbus)) * np.exp(1j * self.bus_vars.theta)
 
 
@@ -939,6 +965,7 @@ def add_linear_node_balance(t_idx: int,
     Add the kirchoff nodal equality
     :param t_idx: time step
     :param Bbus: susceptance matrix (complete)
+    :param vd: Array of slack indices
     :param bus_data: BusData
     :param bus_vars: BusVars
     :param prob: LpModel
@@ -1179,16 +1206,16 @@ def run_linear_ntc_opf_ts(grid: MultiCircuit,
 
     # gather the results
     if status == LpModel.OPTIMAL:
-        print('Solution:')
-        print('Objective value =', lp_model.fobj_value())
+        # print('Solution:')
+        # print('Objective value =', lp_model.fobj_value())
         mip_vars.acceptable_solution = True
     else:
-        print('The problem does not have an optimal solution.')
+        logger.add_error('The problem does not have an optimal solution.')
         mip_vars.acceptable_solution = False
-        lp_file_name = grid.name + "_debug.lp"
-        lp_model.save_model(file_name=lp_file_name)
-        print("Debug LP model saved as:", lp_file_name)
+        # lp_file_name = grid.name + "_debug.lp"
+        # lp_model.save_model(file_name=lp_file_name)
+        # print("Debug LP model saved as:", lp_file_name)
 
-    vars_v = mip_vars.get_values(grid.Sbase)
+    vars_v = mip_vars.get_values(grid.Sbase, model=lp_model)
 
     return vars_v

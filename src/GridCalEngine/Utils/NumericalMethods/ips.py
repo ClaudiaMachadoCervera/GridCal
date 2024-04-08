@@ -38,7 +38,7 @@ def step_calculation(v: Vec, dv: Vec, tau: float = 0.99995):
     :param v: Array of multipliers or slack variables
     :param dv: Variation calculated in the Newton step
     :param tau: Factor to be not exactly 1
-    :return:
+    :return: step size value for the given multipliers
     """
     k = np.flatnonzero(dv < 0.0)
     if len(k) > 0:
@@ -85,8 +85,8 @@ def calc_error(dx, dz, dmu, dlmbda):
 def max_abs(x: Vec):
     """
     Compute max abs efficiently
-    :param x:
-    :return:
+    :param x: State vector
+    :return: Inf-norm of the state vector
     """
     max_val = 0.0
     for x_val in x:
@@ -100,11 +100,11 @@ def max_abs(x: Vec):
 def calc_feascond(g: Vec, h: Vec, x: Vec, z: Vec):
     """
     Calculate the feasible conditions
-    :param g:
-    :param h:
-    :param x:
-    :param z:
-    :return:
+    :param g: Equality values
+    :param h: Inequality values
+    :param x: State vector
+    :param z: Vector of z slack variables
+    :return: Feasibility condition value
     """
     return max(max_abs(g), np.max(h)) / (1.0 + max(max_abs(x), max_abs(z)))
 
@@ -112,20 +112,20 @@ def calc_feascond(g: Vec, h: Vec, x: Vec, z: Vec):
 def calc_gradcond(lx: Vec, lam: Vec, mu: Vec):
     """
     calculate the gradient conditions
-    :param lx:
-    :param lam:
-    :param mu:
-    :return:
+    :param lx: Gradient of the lagrangian
+    :param lam: Vector of lambda multipliers
+    :param mu: Vector of mu multipliers
+    :return: Gradient condition value
     """
     return max_abs(lx) / (1 + max(max_abs(lam), max_abs(mu)))
 
 
 def calc_ccond(mu: Vec, z: Vec, x: Vec):
     """
-    :param mu:
-    :param z:
-    :param x:
-    :return:
+    :param mu: Vector of mu mutipliers
+    :param z: Vector of z slack variables
+    :param x: State vector
+    :return: Vector of ccond
     """
     return (mu @ z) / (1.0 + max_abs(x))
 
@@ -133,9 +133,9 @@ def calc_ccond(mu: Vec, z: Vec, x: Vec):
 def calc_ocond(f: float, f_prev: float):
     """
 
-    :param f:
-    :param f_prev:
-    :return:
+    :param f: Value of objective funciton
+    :param f_prev: Previous value of objective function
+    :return: Variation of the objective function
     """
     return abs(f - f_prev) / (1.0 + abs(f_prev))
 
@@ -283,7 +283,7 @@ def interior_point_solver(x0: Vec,
     :param func: A function pointer called with (x, mu, lmbda, *args) that returns (f, G, H, fx, Gx, Hx, fxx, Gxx, Hxx)
     :param arg: Tuple of arguments to call func: func(x, mu, lmbda, *arg)
     :param max_iter: Maximum number of iterations
-    :param tol: Expected tolerance
+    :param tol: Convergence tolerance
     :param pf_init: Use the power flow solution as initial values
     :param trust: Amount of trust in the initial Newton derivative length estimation
     :param verbose: 0 to 3 (the larger, the more verbose)
@@ -302,7 +302,7 @@ def interior_point_solver(x0: Vec,
     rho_upper = 1.0 + nabla
     e = np.ones(n_ineq)
 
-    # Our init
+    # Our init, which computes the multipliers as a solution of the KKT conditions
     if pf_init:
         z0 = 1.0
         z = z0 * np.ones(n_ineq)
@@ -314,7 +314,7 @@ def interior_point_solver(x0: Vec,
         z_inv = diags(1.0 / z)
         mu = gamma * (z_inv @ e)
         mu_diag = diags(mu)
-        lam = sparse.linalg.lsqr(ret.Gx, -ret.fx - ret.Hx @ mu.T)[0]
+        lam = sparse.linalg.lsqr(ret.Gx.T, -ret.fx - ret.Hx.T @ mu.T)[0]
 
     # PyPower init
     else:
@@ -347,22 +347,23 @@ def interior_point_solver(x0: Vec,
 
         # Evaluate the functions, gradients and hessians at the current iteration.
         ret = func(x, mu, lam, True, True, *arg)
-
+        Hx_t = ret.Hx.T
+        Gx_t = ret.Gx.T
         # compose the Jacobian
         lxx = ret.fxx + ret.Gxx + ret.Hxx
-        m = lxx + ret.Hx @ z_inv @ mu_diag @ ret.Hx.T
-        jac = pack_3_by_4(m.tocsc(), ret.Gx.tocsc(), ret.Gx.T.tocsc())
+        m = lxx + Hx_t @ z_inv @ mu_diag @ ret.Hx
+        jac = pack_3_by_4(m.tocsc(), Gx_t.tocsc(), ret.Gx.tocsc())
 
         # compose the residual
-        lx = ret.fx + ret.Gx @ lam + ret.Hx @ mu
-        n = lx + ret.Hx @ z_inv @ (gamma * e + mu * ret.H)
+        lx = ret.fx + Gx_t @ lam + Hx_t @ mu
+        n = lx + Hx_t @ z_inv @ (gamma * e + mu * ret.H)
         r = - np.r_[n, ret.G]
 
         # Find the reduced problem residuals and split them
         dx, dlam = split(linear_solver(jac, r), n_x)
 
         # Calculate the inequalities residuals using the reduced problem residuals
-        dz = - ret.H - z - ret.Hx.T @ dx
+        dz = - ret.H - z - ret.Hx @ dx
         dmu = - mu + z_inv @ (gamma * e - mu * dz)
 
         # Step control as in PyPower
@@ -402,13 +403,14 @@ def interior_point_solver(x0: Vec,
 
         # Update fobj, g, h
         ret = func(x, mu, lam, True, False, *arg)
-
+        Hx_t = ret.Hx.T
+        Gx_t = ret.Gx.T
         g_norm = np.linalg.norm(ret.G, np.Inf)
         lam_norm = np.linalg.norm(lam, np.Inf)
         mu_norm = np.linalg.norm(mu, np.Inf)
         z_norm = np.linalg.norm(z, np.Inf)
 
-        lx = ret.fx + ret.Hx @ mu + ret.Gx @ lam
+        lx = ret.fx + Hx_t @ mu + Gx_t @ lam
         feascond = max([g_norm, max(ret.H)]) / (1 + max([np.linalg.norm(x, np.Inf), z_norm]))
         gradcond = np.linalg.norm(lx, np.Inf) / (1 + max([lam_norm, mu_norm]))
         error = np.max([feascond, gradcond])

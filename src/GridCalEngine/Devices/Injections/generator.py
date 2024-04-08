@@ -20,7 +20,7 @@ import pandas as pd
 from typing import Union
 from matplotlib import pyplot as plt
 from GridCalEngine.basic_structures import Logger
-from GridCalEngine.enumerations import DeviceType, BuildStatus
+from GridCalEngine.enumerations import DeviceType, BuildStatus, SubObjectType
 from GridCalEngine.Devices.Aggregation.technology import Technology
 from GridCalEngine.Devices.Parents.generator_parent import GeneratorParent
 from GridCalEngine.Devices.Injections.generator_q_curve import GeneratorQCurve
@@ -170,7 +170,7 @@ class Generator(GeneratorParent):
         self.q_curve = GeneratorQCurve()
 
         if q_points is not None:
-            self.q_curve.set_data(np.array(q_points))
+            self.q_curve.set(np.array(q_points))
             self.custom_q_points = True
         else:
             self.q_curve.make_default_q_curve(self.Snom, self.qmin_set, self.qmax_set, n=1)
@@ -221,7 +221,7 @@ class Generator(GeneratorParent):
         self.register(key='Qmax', units='MVAr', tpe=float, definition='Maximum reactive power.')
         self.register(key='use_reactive_power_curve', units='', tpe=bool,
                       definition='Use the reactive power capability curve?')
-        self.register(key='q_curve', units='MVAr', tpe=DeviceType.GeneratorQCurve,
+        self.register(key='q_curve', units='MVAr', tpe=SubObjectType.GeneratorQCurve,
                       definition='Capability curve data (double click on the generator to edit)',
                       editable=False, display=False)
 
@@ -316,116 +316,6 @@ class Generator(GeneratorParent):
             self._Cost0_prof.set(arr=val)
         else:
             raise Exception(str(type(val)) + 'not supported to be set into a Cost0_prof')
-
-    def get_properties_dict(self, version=3):
-        """
-        Get json dictionary
-        :return: json-compatible dictionary
-        """
-        if version == 2:
-            return {'id': self.idtag,
-                    'type': 'generator',
-                    'phases': 'ps',
-                    'name': self.name,
-                    'name_code': self.code,
-                    'bus': self.bus.idtag,
-                    'active': self.active,
-                    'is_controlled': self.is_controlled,
-                    'p': self.P,
-                    'pf': self.Pf,
-                    'vset': self.Vset,
-                    'snom': self.Snom,
-                    'qmin': self.Qmin,
-                    'qmax': self.Qmax,
-                    'pmin': self.Pmin,
-                    'pmax': self.Pmax,
-                    'cost': self.Cost,
-                    'technology': "",
-                    }
-        elif version == 3:
-            return {'id': self.idtag,
-                    'type': 'generator',
-                    'phases': 'ps',
-                    'name': self.name,
-                    'name_code': self.code,
-                    'bus': self.bus.idtag,
-                    'active': self.active,
-                    'is_controlled': self.is_controlled,
-                    'p': self.P,
-                    'pf': self.Pf,
-                    'vset': self.Vset,
-                    'snom': self.Snom,
-                    'qmin': self.Qmin,
-                    'qmax': self.Qmax,
-                    'q_curve': self.q_curve.str(),
-
-                    'pmin': self.Pmin,
-                    'pmax': self.Pmax,
-                    'cost2': self.Cost2,
-                    'cost1': self.Cost,
-                    'cost0': self.Cost0,
-
-                    'startup_cost': self.StartupCost,
-                    'shutdown_cost': self.ShutdownCost,
-                    'min_time_up': self.MinTimeUp,
-                    'min_time_down': self.MinTimeDown,
-                    'ramp_up': self.RampUp,
-                    'ramp_down': self.RampDown,
-
-                    'capex': self.capex,
-                    'opex': self.opex,
-                    'build_status': str(self.build_status.value).lower(),
-                    'technology': "",
-                    }
-        else:
-            return dict()
-
-    def get_profiles_dict(self, version=3):
-        """
-
-        :return:
-        """
-
-        if self.active_prof is None:
-            active_prof = list()
-        else:
-            active_prof = self.active_prof.tolist()
-
-        if self.P_prof is None:
-            P_prof = list()
-        else:
-            P_prof = self.P_prof.tolist()
-
-        if self.Pf_prof is None:
-            Pf_prof = list()
-        else:
-            Pf_prof = self.Pf_prof.tolist()
-
-        if self.Vset_prof is None:
-            Vset_prof = list()
-        else:
-            Vset_prof = self.Vset_prof.tolist()
-
-        return {'id': self.idtag,
-                'active': active_prof,
-                'p': P_prof,
-                'v': Vset_prof,
-                'pf': Pf_prof}
-
-    def get_units_dict(self, version=3):
-        """
-        Get units of the values
-        """
-        return {'p': 'MW',
-                'vset': 'p.u.',
-                'pf': 'p.u.',
-                'snom': 'MVA',
-                'enom': 'MWh',
-                'qmin': 'MVAr',
-                'qmax': 'MVAr',
-                'pmin': 'MW',
-                'pmax': 'MW',
-                'cost': 'e/MWh'}
 
     def plot_profiles(self, time=None, show_fig=True):
         """

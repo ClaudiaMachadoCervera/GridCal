@@ -82,45 +82,41 @@ def delete_{singular_name}(self, obj: dev.{cls_name}) -> None:
 
 if __name__ == '__main__':
     entries = [
-        # {"list_name": "", "singular_name": "", "plural_name": "", "cls_name": "", },
-
-        {"list_name": "voltage_levels",
-         "singular_name": "voltage_level",
-         "plural_name": "voltage_levels",
-         "cls_name": "VoltageLevel", },
-
+        {"singular_name": "modelling_authority",
+         "plural_name": "modelling_authorities",
+         "cls_name": "ModellingAuthority", },
     ]
 
     with open('code_generated.py', "w") as f:
 
         for entry in entries:
-            f.write(generate_declaraion(list_name=entry["list_name"],
+            f.write(generate_declaraion(list_name=entry["plural_name"],
                                         cls_name=entry["cls_name"]))
 
         for entry in entries:
             f.write("\n")
             f.write("# " + "-" * 118 + "\n")
-            f.write(f"# {entry['list_name']}\n")
+            f.write(f"# {entry['singular_name']}\n")
             f.write("# " + "-" * 118 + "\n\n")
 
-            f.write(list_getter(list_name=entry["list_name"],
+            f.write(list_getter(list_name=entry["plural_name"],
                                 plural_name=entry["plural_name"],
                                 cls_name=entry["cls_name"]) + "\n")
 
-            f.write(list_size(list_name=entry["list_name"],
+            f.write(list_size(list_name=entry["plural_name"],
                               plural_name=entry["plural_name"]) + "\n")
 
-            f.write(element_getter(list_name=entry["list_name"],
+            f.write(element_getter(list_name=entry["plural_name"],
                                    singular_name=entry["singular_name"],
                                    cls_name=entry["cls_name"]) + "\n")
 
-            f.write(names_getter(list_name=entry["list_name"],
+            f.write(names_getter(list_name=entry["plural_name"],
                                  singular_name=entry["singular_name"]) + "\n")
 
-            f.write(element_adder(list_name=entry["list_name"],
+            f.write(element_adder(list_name=entry["plural_name"],
                                   singular_name=entry["singular_name"],
                                   cls_name=entry["cls_name"]) + "\n")
 
-            f.write(element_deleter(list_name=entry["list_name"],
+            f.write(element_deleter(list_name=entry["plural_name"],
                                     singular_name=entry["singular_name"],
                                     cls_name=entry["cls_name"]) + "\n")

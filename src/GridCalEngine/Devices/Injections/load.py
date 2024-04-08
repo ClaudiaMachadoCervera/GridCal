@@ -28,7 +28,8 @@ class Load(LoadParent):
     Load
     """
 
-    def __init__(self, name='Load', idtag=None, code='', G=0.0, B=0.0, Ir=0.0, Ii=0.0, P=0.0, Q=0.0, Cost=1200.0,
+    def __init__(self, name='Load', idtag=None, code='',
+                 G=0.0, B=0.0, Ir=0.0, Ii=0.0, P=0.0, Q=0.0, Cost=1200.0,
                  active=True, mttf=0.0, mttr=0.0, capex=0, opex=0,
                  build_status: BuildStatus = BuildStatus.Commissioned):
         """
@@ -152,74 +153,6 @@ class Load(LoadParent):
             self._B_prof.set(arr=val)
         else:
             raise Exception(str(type(val)) + 'not supported to be set into a B_prof')
-
-    def get_properties_dict(self, version=3):
-        """
-        Get json dictionary
-        :return:
-        """
-        if version in [2, 3]:
-            return {'id': self.idtag,
-                    'type': 'load',
-                    'phases': 'ps',
-                    'name': self.name,
-                    'name_code': self.code,
-                    'bus': self.bus.idtag,
-                    'active': bool(self.active),
-                    'g': self.G,
-                    'b': self.B,
-                    'ir': self.Ir,
-                    'ii': self.Ii,
-                    'p': self.P,
-                    'q': self.Q,
-                    'shedding_cost': self.Cost
-                    }
-        else:
-            return dict()
-
-    def get_profiles_dict(self, version=3):
-        """
-
-        :return:
-        """
-
-        if self.active_prof is not None:
-            active_profile = self.active_prof.tolist()
-            P_prof = self.P_prof.tolist()
-            Q_prof = self.Q_prof.tolist()
-            Ir_prof = self.Ir_prof.tolist()
-            Ii_prof = self.Ii_prof.tolist()
-            G_prof = self.G_prof.tolist()
-            B_prof = self.B_prof.tolist()
-
-        else:
-            active_profile = list()
-            P_prof = list()
-            Q_prof = list()
-            Ir_prof = list()
-            Ii_prof = list()
-            G_prof = list()
-            B_prof = list()
-
-        return {'id': self.idtag,
-                'active': active_profile,
-                'p': P_prof,
-                'q': Q_prof,
-                'ir': Ir_prof,
-                'ii': Ii_prof,
-                'g': G_prof,
-                'b': B_prof}
-
-    def get_units_dict(self, version=3):
-        """
-        Get units of the values
-        """
-        return {'g': 'MVAr at V=1 p.u.',
-                'b': 'MVAr at V=1 p.u.',
-                'ir': 'MVAr at V=1 p.u.',
-                'ii': 'MVAr at V=1 p.u.',
-                'p': 'MW',
-                'q': 'MVAr'}
 
     def plot_profiles(self, time=None, show_fig=True):
         """

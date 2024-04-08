@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program; if not, write to the Free Software Foundation,
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+import json
 import math
 from typing import Dict, Union, List, Tuple, Any, Callable
 import pandas as pd
@@ -26,7 +27,7 @@ from GridCalEngine.Devices.Parents.editable_device import GCProp
 from GridCalEngine.Devices.profile import Profile
 from GridCalEngine.Devices.sparse_array import SparseArray
 from GridCalEngine.Devices.types import ALL_DEV_TYPES
-from GridCalEngine.enumerations import DiagramType, DeviceType
+from GridCalEngine.enumerations import DiagramType, DeviceType, SubObjectType, TransformerControlType
 
 
 def get_objects_dictionary() -> Dict[str, ALL_DEV_TYPES]:
@@ -37,8 +38,11 @@ def get_objects_dictionary() -> Dict[str, ALL_DEV_TYPES]:
 
     # this list must be sorted in dependency order so that the
     # loading algorithm is able to find the object substitutions
-    object_types = {'area': dev.Area(),
 
+    object_types = {
+                    'modelling_authority': dev.ModellingAuthority(),
+
+                    'area': dev.Area(),
                     'zone': dev.Zone(),
 
                     'substation': dev.Substation(),
@@ -46,6 +50,9 @@ def get_objects_dictionary() -> Dict[str, ALL_DEV_TYPES]:
                     'voltage_level': dev.VoltageLevel(),
 
                     'country': dev.Country(),
+                    'community': dev.Community(),
+                    'region': dev.Region(),
+                    'municipality': dev.Municipality(),
 
                     'technology': dev.Technology(),
 
@@ -71,6 +78,8 @@ def get_objects_dictionary() -> Dict[str, ALL_DEV_TYPES]:
 
                     'linear_shunt': dev.ControllableShunt(),
 
+                    'external_grid': dev.ExternalGrid(),
+
                     'current_injection': dev.CurrentInjection(),
 
                     'wires': dev.Wire(),
@@ -78,6 +87,8 @@ def get_objects_dictionary() -> Dict[str, ALL_DEV_TYPES]:
                     'underground_cable_types': dev.UndergroundLineType(),
                     'sequence_line_types': dev.SequenceLineType(),
                     'transformer_types': dev.TransformerType(),
+
+                    'branch_group': dev.BranchGroup(),
 
                     'branch': dev.Branch(),
                     'transformer2w': dev.Transformer2W(),
@@ -92,6 +103,10 @@ def get_objects_dictionary() -> Dict[str, ALL_DEV_TYPES]:
 
                     'vsc': dev.VSC(None, None),
                     'upfc': dev.UPFC(None, None),
+
+                    'series_reactance': dev.SeriesReactance(),
+
+                    'switch': dev.Switch(),
 
                     'contingency_group': dev.ContingencyGroup(),
                     'contingency': dev.Contingency(),
@@ -110,7 +125,6 @@ def get_objects_dictionary() -> Dict[str, ALL_DEV_TYPES]:
                     'fluid_p2x': dev.FluidP2x(),
 
                     }
-
     return object_types
 
 
@@ -374,8 +388,14 @@ def gridcal_object_to_json(elm: ALL_DEV_TYPES) -> Dict[str, str]:
             if prop.has_profile():
                 data[name + '_prof'] = profile_todict(elm.get_profile_by_prop(prop=prop))
 
-        elif prop.tpe == DeviceType.GeneratorQCurve:
-            data[name] = obj.str()
+        elif prop.tpe == SubObjectType.GeneratorQCurve:
+            data[name] = obj.to_list()
+
+        elif prop.tpe == SubObjectType.LineLocations:
+            data[name] = obj.to_list()
+
+        elif prop.tpe == SubObjectType.TapChanger:
+            data[name] = obj.to_dict()
 
         else:
             # if the object is not of a primary type, get the idtag instead
@@ -528,12 +548,21 @@ class CreatedOnTheFly:
     This class is to pack all those devices that are created "on the fly" to support legacy formats
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
+        """
+        Constructor
+        """
         # legacy operations: this is from when area, zone and substation were strings,
         # now we create those objects on the fly
         self.legacy_area_dict: Dict[str, dev.Area] = dict()
         self.legacy_zone_dict: Dict[str, dev.Zone] = dict()
         self.legacy_substation_dict: Dict[str, dev.Substation] = dict()
+
+        self.contingency_groups: List[dev.ContingencyGroup] = list()
+        self.contingencies: List[dev.Contingency] = list()
+
+        self.technologies: Dict[str, dev.Technology] = dict()
+        self.gen2technologies: List[dev.GeneratorTechnology] = list()
 
     def get_create_area(self, property_value):
         """
@@ -570,6 +599,41 @@ class CreatedOnTheFly:
             substation = dev.Substation(name=str(property_value))
             self.legacy_substation_dict[property_value] = substation
         return substation
+
+    def create_contingency(self, elm: ALL_DEV_TYPES):
+        """
+
+        :param elm:
+        :return:
+        """
+        con_group = dev.ContingencyGroup(name=elm.name)
+        conn = dev.Contingency(device_idtag=elm.idtag, prop='active', group=con_group)
+
+        self.contingency_groups.append(con_group)
+        self.contingencies.append(conn)
+
+    def create_technology(self, elm: dev.Generator, tech_name: str):
+        """
+
+        :param elm:
+        :param tech_name:
+        :return:
+        """
+
+        tech = self.technologies.get(tech_name, None)
+
+        if tech is None:
+            tech = dev.Technology(name=tech_name)
+            self.technologies[tech_name] = tech
+
+        gen2tech = dev.GeneratorTechnology(name=f"{elm.name}_{tech_name}",
+                                           code='',
+                                           idtag=None,
+                                           generator=elm,
+                                           technology=tech,
+                                           proportion=1.0)
+
+        self.gen2technologies.append(gen2tech)
 
 
 def parse_object_type_from_dataframe(main_df: pd.DataFrame,
@@ -636,82 +700,83 @@ def parse_object_type_from_dataframe(main_df: pd.DataFrame,
                         # the property of the file exists, parse it
                         if isinstance(gc_prop.tpe, DeviceType):
 
-                            if gc_prop.tpe == DeviceType.GeneratorQCurve:
-                                val = dev.GeneratorQCurve()
-                                val.parse(property_value)
-                                elm.set_snapshot_value(gc_prop.name, val)
+                            # we must look for the refference in elements_dict
+                            collection = elements_dict_by_type.get(gc_prop.tpe, None)
 
-                                if gc_prop.has_profile():
-                                    prof.fill(val)
+                            if collection is not None:
+                                ref_idtag = str(property_value)
+                                ref_elm = collection.get(ref_idtag, None)
 
-                            else:
-                                # we must look for the refference in elements_dict
-                                collection = elements_dict_by_type.get(gc_prop.tpe, None)
+                                if ref_elm is not None:
+                                    elm.set_snapshot_value(gc_prop.name, ref_elm)
 
-                                if collection is not None:
-                                    ref_idtag = str(property_value)
-                                    ref_elm = collection.get(ref_idtag, None)
+                                    if gc_prop.has_profile():
+                                        prof.fill(ref_elm)
 
-                                    if ref_elm is not None:
-                                        elm.set_snapshot_value(gc_prop.name, ref_elm)
-
-                                        if gc_prop.has_profile():
-                                            prof.fill(ref_elm)
-
-                                    else:
-
-                                        # legacy operations: this is from when grids referenced buses by name
-                                        if gc_prop.name in ['bus_from', 'bus_to', 'bus']:
-                                            ref_elm = look_in_collection_by_name(key=ref_idtag, collection=collection)
-                                            if ref_elm is None:
-                                                could_not_fix_it = True
-                                            else:
-                                                could_not_fix_it = False
-
-                                                elm.set_snapshot_value(gc_prop.name, ref_elm)
-
-                                                if gc_prop.has_profile():
-                                                    prof.fill(ref_elm)
-                                        else:
-                                            could_not_fix_it = True
-
-                                        if could_not_fix_it:
-                                            logger.add_error("Could not locate refference",
-                                                             device=row.get('idtag', 'not provided'),
-                                                             device_class=template_elm.device_type.value,
-                                                             device_property=gc_prop.name,
-                                                             value=ref_idtag)
                                 else:
 
-                                    # legacy operations: this is from when area, zone and substation were strings
-                                    if gc_prop.name == 'area':
+                                    # legacy operations: this is from when grids referenced buses by name
+                                    if gc_prop.name in ['bus_from', 'bus_to', 'bus']:
+                                        ref_elm = look_in_collection_by_name(key=ref_idtag, collection=collection)
+                                        if ref_elm is None:
+                                            could_not_fix_it = True
+                                        else:
+                                            could_not_fix_it = False
 
-                                        if str(property_value).strip() != '':
-                                            area = on_the_fly.get_create_area(property_value=str(property_value))
-                                            elm.set_snapshot_value(gc_prop.name, area)
+                                            elm.set_snapshot_value(gc_prop.name, ref_elm)
 
-                                    elif gc_prop.name == 'zone':
-
-                                        if str(property_value).strip() != '':
-                                            zone = on_the_fly.get_create_zone(property_value=str(property_value))
-                                            elm.set_snapshot_value(gc_prop.name, zone)
-
-                                    elif gc_prop.name == 'substation':
-
-                                        if str(property_value).strip() != '':
-                                            substation = on_the_fly.get_create_substation(
-                                                property_value=str(property_value))
-                                            elm.set_snapshot_value(gc_prop.name, substation)
-                                    elif gc_prop.name == 'template' and property_value == 'BranchTemplate':
-                                        # skip this
-                                        pass
+                                            if gc_prop.has_profile():
+                                                prof.fill(ref_elm)
                                     else:
+                                        could_not_fix_it = True
 
-                                        logger.add_error("No device of the refferenced type",
+                                    if could_not_fix_it:
+                                        logger.add_error("Could not locate refference",
                                                          device=row.get('idtag', 'not provided'),
                                                          device_class=template_elm.device_type.value,
                                                          device_property=gc_prop.name,
-                                                         value=property_value)
+                                                         value=ref_idtag)
+                            else:
+
+                                # legacy operations: this is from when area, zone and substation were strings
+                                if gc_prop.name == 'area':
+
+                                    if str(property_value).strip() != '':
+                                        area = on_the_fly.get_create_area(property_value=str(property_value))
+                                        elm.set_snapshot_value(gc_prop.name, area)
+
+                                elif gc_prop.name == 'zone':
+
+                                    if str(property_value).strip() != '':
+                                        zone = on_the_fly.get_create_zone(property_value=str(property_value))
+                                        elm.set_snapshot_value(gc_prop.name, zone)
+
+                                elif gc_prop.name == 'substation':
+
+                                    if str(property_value).strip() != '':
+                                        substation = on_the_fly.get_create_substation(
+                                            property_value=str(property_value))
+                                        elm.set_snapshot_value(gc_prop.name, substation)
+                                elif gc_prop.name == 'template' and property_value == 'BranchTemplate':
+                                    # skip this
+                                    pass
+                                else:
+
+                                    logger.add_error("No device of the refferenced type",
+                                                     device=row.get('idtag', 'not provided'),
+                                                     device_class=template_elm.device_type.value,
+                                                     device_property=gc_prop.name,
+                                                     value=property_value)
+
+                        elif isinstance(gc_prop.tpe, SubObjectType):
+
+                            if gc_prop.tpe == SubObjectType.GeneratorQCurve:
+                                q_curve: dev.GeneratorQCurve = elm.get_snapshot_value(gc_prop)
+
+                                if isinstance(property_value, str):
+                                    q_curve.parse(json.loads(property_value))
+                                else:
+                                    q_curve.parse(property_value)
 
                         elif gc_prop.tpe == str:
                             # set the value directly
@@ -751,9 +816,16 @@ def parse_object_type_from_dataframe(main_df: pd.DataFrame,
                                     prof.fill(val)
 
                             except ValueError:
-                                logger.add_error(f'Cannot cast value to {gc_prop.tpe}',
-                                                 device=elm.name,
-                                                 value=property_value)
+                                skip = False
+                                if property_name == 'control_mode':
+                                    if property_value == "1:Pt":
+                                        elm.set_snapshot_value(gc_prop.name, TransformerControlType.Pf)
+                                        skip = True
+
+                                if not skip:
+                                    logger.add_error(f'Cannot cast value to {gc_prop.tpe}',
+                                                     device=elm.name,
+                                                     value=property_value)
 
                         else:
                             raise Exception(f'Unsupported property type: {gc_prop.tpe}')
@@ -775,7 +847,12 @@ def parse_object_type_from_dataframe(main_df: pd.DataFrame,
                             elm.set_profile(gc_prop, arr=dfp.values[:, i].astype(gc_prop.tpe))
 
                         else:
-                            logger.add_info('No profile for the property', value=gc_prop.name)
+                            skip = False
+                            if gc_prop.name == 'bus':
+                                skip = True
+
+                            if not skip:
+                                logger.add_info(msg='No profile for the property', value=gc_prop.name)
 
                 else:
                     # the property does not exists, neither in the old names
@@ -783,6 +860,14 @@ def parse_object_type_from_dataframe(main_df: pd.DataFrame,
                     if template_elm.device_type == DeviceType.ShuntDevice:
                         if property_name in ['is_controlled', 'Bmin', 'Bmax', 'Vset']:
                             skip = True
+
+                    if property_name == 'contingency_enabled':
+                        # this is a branch with the legacy property "contingency_enabled", hence, create a contingency
+                        on_the_fly.create_contingency(elm=elm)
+                        skip = True
+                    elif property_name == 'technology':
+                        on_the_fly.create_technology(elm=elm, tech_name=property_value)
+                        skip = True
 
                     if not skip:
                         logger.add_warning("Property in the file is not found in the model",
@@ -895,43 +980,60 @@ def parse_object_type_from_json(template_elm: ALL_DEV_TYPES,
 
                             if isinstance(gc_prop.tpe, DeviceType):
 
-                                if gc_prop.tpe == DeviceType.GeneratorQCurve:
-                                    val = dev.GeneratorQCurve()
-                                    val.parse(property_value)
-                                    elm.set_snapshot_value(gc_prop.name, val)
-                                    search_and_apply_json_profile(json_entry=json_entry,
-                                                                  gc_prop=gc_prop,
-                                                                  elm=elm,
-                                                                  property_value=val)
+                                # this is a hyperlink to another object
+                                # we must look for the refference in elements_dict
+                                collection = elements_dict_by_type.get(gc_prop.tpe, None)
 
-                                else:
-                                    # we must look for the refference in elements_dict
-                                    collection = elements_dict_by_type.get(gc_prop.tpe, None)
+                                if collection is not None:
+                                    ref_idtag = str(property_value)
+                                    ref_elm = collection.get(ref_idtag, None)
 
-                                    if collection is not None:
-                                        ref_idtag = str(property_value)
-                                        ref_elm = collection.get(ref_idtag, None)
+                                    if ref_elm is not None:
+                                        elm.set_snapshot_value(gc_prop.name, ref_elm)
+                                        search_and_apply_json_profile(json_entry=json_entry,
+                                                                      gc_prop=gc_prop,
+                                                                      elm=elm,
+                                                                      property_value=ref_elm,
+                                                                      collection=collection)
 
-                                        if ref_elm is not None:
-                                            elm.set_snapshot_value(gc_prop.name, ref_elm)
-                                            search_and_apply_json_profile(json_entry=json_entry,
-                                                                          gc_prop=gc_prop,
-                                                                          elm=elm,
-                                                                          property_value=ref_elm,
-                                                                          collection=collection)
-
-                                        else:
-                                            logger.add_error("Could not locate refference",
-                                                             device=elm.idtag,
-                                                             device_class=template_elm.device_type.value,
-                                                             device_property=gc_prop.name,
-                                                             value=ref_idtag)
                                     else:
-                                        logger.add_error("No device of the refferenced type",
+                                        logger.add_error("Could not locate reference",
                                                          device=elm.idtag,
                                                          device_class=template_elm.device_type.value,
                                                          device_property=gc_prop.name,
-                                                         value=property_value)
+                                                         value=ref_idtag)
+                                else:
+                                    logger.add_error("No device of the referenced type",
+                                                     device=elm.idtag,
+                                                     device_class=template_elm.device_type.value,
+                                                     device_property=gc_prop.name,
+                                                     value=property_value)
+
+                            elif isinstance(gc_prop.tpe, SubObjectType):  # this is a hyperlink to another object
+
+                                if gc_prop.tpe == SubObjectType.GeneratorQCurve:
+
+                                    # get the curve object and fill it with the json data
+                                    q_curve: dev.GeneratorQCurve = elm.get_snapshot_value(prop=gc_prop)
+                                    if isinstance(property_value, str):
+                                        q_curve.parse(json.loads(property_value))
+                                    else:
+                                        q_curve.parse(property_value)
+
+                                elif gc_prop.tpe == SubObjectType.LineLocations:
+
+                                    # get the line locations object and fill it with the json data
+                                    locations_obj: dev.LineLocations = elm.get_snapshot_value(prop=gc_prop)
+                                    locations_obj.parse(property_value)
+
+                                elif gc_prop.tpe == SubObjectType.TapChanger:
+
+                                    # get the line locations object and fill it with the json data
+                                    locations_obj: dev.TapChanger = elm.get_snapshot_value(prop=gc_prop)
+                                    locations_obj.parse(property_value)
+
+                                else:
+                                    raise Exception(f"SubObjectType {gc_prop.tpe} not implemented")
 
                             elif gc_prop.tpe == str:
                                 # set the value directly
@@ -1095,6 +1197,14 @@ def parse_gridcal_data(data: Dict[str, Union[str, float, Dict, pd.DataFrame, Dic
                     circuit.add_zone(obj=on_the_fly_elm)
                 for name, on_the_fly_elm in on_the_fly.legacy_substation_dict.items():
                     circuit.add_substation(obj=on_the_fly_elm)
+                for conn_group in on_the_fly.contingency_groups:
+                    circuit.add_contingency_group(obj=conn_group)
+                for cont in on_the_fly.contingencies:
+                    circuit.add_contingency(obj=cont)
+                for tech_name, technology in on_the_fly.technologies.items():
+                    circuit.add_technology(obj=technology)
+                for gen2tech in on_the_fly.gen2technologies:
+                    circuit.add_generator_technology(obj=gen2tech)
 
                 # set the dictionary per type for later
                 elements_dict_by_type[template_elm.device_type] = devices_dict
