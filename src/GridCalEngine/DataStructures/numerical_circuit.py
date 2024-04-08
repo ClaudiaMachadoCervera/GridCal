@@ -835,7 +835,7 @@ class NumericalCircuit:
         """
         return si.SimulationIndices(bus_types=self.bus_data.bus_types,
                                     Pbus=self.Sbus.real,
-                                    control_mode=self.branch_data.control_mode,
+                                    control_mode=self.branch_data.control_mode, #TODO: ¿Solo la información de las ramas?
                                     F=self.branch_data.F,
                                     T=self.branch_data.T,
                                     dc=self.branch_data.dc
