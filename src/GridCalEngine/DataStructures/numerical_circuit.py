@@ -1095,6 +1095,18 @@ class NumericalCircuit:
         return self.simulation_indices_.pv
 
     @property
+    def pvr(self):
+        """
+
+        :return:
+        """
+        if self.simulation_indices_ is None:
+            self.simulation_indices_ = self.get_simulation_indices()
+
+        return self.simulation_indices_.pvr
+
+
+    @property
     def pqpv(self):
         """
 

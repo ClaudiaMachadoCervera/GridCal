@@ -201,10 +201,13 @@ class SimulationIndices:
         # branch control indices
         self.any_control: bool = False
 
-        # (old iPfsh) indices of the Branches controlling Pf flow with theta sh
+        # indices of the Branches controlling Pf flow with tau
         self.k_pf_tau: IntVec = np.zeros(0, dtype=int)
 
-        # (old iQfma) indices of the Branches controlling Qf with ma
+        # indices of the Branches controlling Pt flow with tau
+        self.k_pt_tau: IntVec = np.zeros(0, dtype=int)
+
+        # indices of the Branches controlling Qf flow with m
         self.k_qf_m: IntVec = np.zeros(0, dtype=int)
 
         # (old iBeqz) indices of the Branches when forcing the Qf flow to zero (aka "the zero condition")
