@@ -97,6 +97,7 @@ class BranchData:
         self.virtual_tap_f: Vec = np.ones(self.nelm, dtype=float)
 
         self.Pfset: Vec = np.zeros(nelm, dtype=float)
+        self.Ptset: Vec = np.zeros(nelm, dtype=float)
         self.Qfset: Vec = np.zeros(nelm, dtype=float)
         self.Qtset: Vec = np.zeros(nelm, dtype=float)
         self.vf_set: Vec = np.ones(nelm, dtype=float)
@@ -190,6 +191,7 @@ class BranchData:
         data.Beq = self.Beq[elm_idx]
         data.G0sw = self.G0sw[elm_idx]
         data.Pfset = self.Pfset[elm_idx]
+        data.Ptset = self.Ptset[elm_idx]
         data.Qfset = self.Qfset[elm_idx]
         data.Qtset = self.Qtset[elm_idx]
         data.vf_set = self.vf_set[elm_idx]
@@ -278,6 +280,7 @@ class BranchData:
         data.Beq = self.Beq.copy()
         data.G0sw = self.G0sw.copy()
         data.Pfset = self.Pfset.copy()
+        data.Ptset = self.Ptset.copy()
         data.Qfset = self.Qfset.copy()
         data.Qtset = self.Qtset.copy()
         data.vf_set = self.vf_set.copy()

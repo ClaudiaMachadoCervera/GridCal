@@ -31,9 +31,69 @@ from GridCalEngine.Utils.NumericalMethods.levenberg_marquadt import levenberg_ma
 from GridCalEngine.Utils.NumericalMethods.autodiff import calc_autodiff_jacobian
 from GridCalEngine.enumerations import SolverType
 from GridCalEngine.Topology.admittance_matrices import compute_passive_admittances
+from GridCalEngine.Topology.simulation_indices import SimulationIndicesV2
 from GridCalEngine.Utils.Sparse.csc import diags
 
+def linn5bus_example():
+    """
+    Grid from Lynn Powel's book
+    """
+    # declare a circuit object
+    grid = gce.MultiCircuit()
 
+    # Add the buses and the generators and loads attached
+    bus1 = gce.Bus('Bus 1', vnom=20)
+    # bus1.is_slack = True  # we may mark the bus a slack
+    grid.add_bus(bus1)
+
+    # add a generator to the bus 1
+    gen1 = gce.Generator('Slack Generator', vset=1.0, Pmin=0, Pmax=1000,
+                         Qmin=-1000, Qmax=1000, Cost=15, Cost2=0.0)
+
+    grid.add_generator(bus1, gen1)
+
+    # add bus 2 with a load attached
+    bus2 = gce.Bus('Bus 2', vnom=20)
+    grid.add_bus(bus2)
+    grid.add_load(bus2, gce.Load('load 2', P=40, Q=20))
+
+    # add bus 3 with a load attached
+    bus3 = gce.Bus('Bus 3', vnom=20)
+    grid.add_bus(bus3)
+    grid.add_load(bus3, gce.Load('load 3', P=25, Q=15))
+
+    # add bus 4 with a load attached
+    bus4 = gce.Bus('Bus 4', vnom=20)
+    grid.add_bus(bus4)
+    grid.add_load(bus4, gce.Load('load 4', P=40, Q=20))
+
+    # add bus 5 with a load attached
+    bus5 = gce.Bus('Bus 5', vnom=20)
+    grid.add_bus(bus5)
+    grid.add_load(bus5, gce.Load('load 5', P=50, Q=20))
+
+    # add bus 6 with a generator
+    bus6 = gce.Bus('Bus 6', vnom=20)
+    grid.add_bus(bus6)
+    gen2 = gce.Generator('Generator 2', vset=1.0, Pmin=0, Pmax=1000,
+                         Qmin=-1000, Qmax=1000, Cost=15, Cost2=0.0)
+
+    grid.add_generator(bus6, gen2)
+
+    # add Lines connecting the buses
+    grid.add_line(gce.Line(bus1, bus2, name='line 1-2', r=0.05, x=0.11, b=0.02, rate=1000))
+    grid.add_line(gce.Line(bus1, bus3, name='line 1-3', r=0.05, x=0.11, b=0.02, rate=1000))
+    grid.add_line(gce.Line(bus1, bus5, name='line 1-5', r=0.03, x=0.08, b=0.02, rate=1000))
+    grid.add_line(gce.Line(bus2, bus3, name='line 2-3', r=0.04, x=0.09, b=0.02, rate=1000))
+    grid.add_line(gce.Line(bus2, bus5, name='line 2-5', r=0.04, x=0.09, b=0.02, rate=1000))
+    grid.add_line(gce.Line(bus3, bus4, name='line 3-4', r=0.06, x=0.13, b=0.03, rate=1000))
+    grid.add_line(gce.Line(bus5, bus6, name='line 5-6', r=0.06, x=0.13, b=0.03, rate=1000))
+    grid.add_transformer2w(gce.Transformer2W(bus4, bus5, name='transformer 4-5', r=0.04, x=0.09, b=0.02, rate=1000,
+                                             tap_module_control_mode=gce.TapModuleControl.Vm,
+                                             regulation_bus=bus2
+                                             ))
+
+    return grid
 def var2x(Va: Vec, Vm: Vec, tau: Vec, m: Vec) -> Vec:
     """
     Compose the unknowns vector
@@ -53,6 +113,8 @@ def compute_g(V: CxVec,
               S0: CxVec,
               I0: CxVec,
               Y0: CxVec,
+              Sf0: CxVec,
+              St0: CxVec,
               Vm: Vec,
               m: Vec,
               tau: Vec,
@@ -96,24 +158,22 @@ def compute_g(V: CxVec,
     Sf_calc = Vf * np.conj(If)
     St_calc = Vt * np.conj(It)
 
-    Vf_branch = Vm[F]
-    Vt_branch = Vm[T]
-    If_branch = Yf * Vm
-    It_branch = Yt * Vm
-    Sf_branch = Vf_branch * np.conj(If_branch)
-    St_branch = Vt_branch * np.conj(It_branch)
-
     dS = Sbus - Scalc
-    dSf_branch = Sf_branch - Sf_calc
-    dSt_branch = St_branch - St_calc
+    dSf_branch = Sf0 - Sf_calc
+    dSt_branch = St0 - St_calc
 
-    g = np.r_[dS[noslack].real, dS[np.r_[pq, pvr]].imag, dSf_branch[k_m].imag, dSt_branch[k_m].imag, dSf_branch[
-        k_tau].real]  # TODO: falta crear el índice i_m_vr
+    g = np.r_[
+        dS[noslack].real,           # dP
+        dS[np.r_[pq, pvr]].imag,    # dQ
+        dSf_branch[k_m].imag,       # dQf
+        dSt_branch[k_m].imag,       # dQt
+        dSf_branch[k_tau].real      # dPf
+    ]  # TODO: falta crear el índice i_m_vr
 
     return g
 
 
-def x2var(x: Vec, n_noslack: int, n_pqpvr: int, n_k_tau: int, n_k_m: int) -> Tuple[Vec, Vec, Vec, Vec, Vec]:
+def x2var(x: Vec, n_noslack: int, n_pqpvr: int, n_k_tau: int, n_k_m: int) -> Tuple[Vec, Vec, Vec, Vec]:
     """
     get the physical variables from the unknowns vector
     :param x: vector of unknowns
@@ -165,6 +225,8 @@ def compute_gx_autodiff(x: Vec,
                         S0: CxVec,
                         I0: CxVec,
                         Y0: CxVec,
+                        Sf0: CxVec,
+                        St0: CxVec,
                         m: Vec,
                         tau: Vec,
                         Cf,
@@ -172,7 +234,7 @@ def compute_gx_autodiff(x: Vec,
                         F: IntVec,
                         T: IntVec,
                         pq: IntVec,
-                        pvpq: IntVec,
+                        noslack: IntVec,
                         pvr: IntVec,
                         pqpvr: IntVec,
                         k_tau: IntVec,
@@ -193,20 +255,20 @@ def compute_gx_autodiff(x: Vec,
     :param F:
     :param T:
     :param pq:
-    :param pvpq:
+    :param noslack:
     :return:
     """
-    npvpq = len(pvpq)
+    npvpq = len(noslack)
     n_pqpvr = len(pqpvr)
     n_k_tau = len(k_tau)
     n_k_m = len(k_m)
     Va = Va0.copy()
     Vm = Vm0.copy()
-    Va[pvpq], Vm[pqpvr], tau[k_tau], m[k_m] = x2var(x=x, n_noslack=npvpq, n_pqpvr=n_pqpvr, n_k_tau=n_k_tau, n_k_m=n_k_m)
+    Va[noslack], Vm[pqpvr], tau[k_tau], m[k_m] = x2var(x=x, n_noslack=npvpq, n_pqpvr=n_pqpvr, n_k_tau=n_k_tau, n_k_m=n_k_m)
     V = Vm * np.exp(1j * Va)
 
-    g = compute_g(V=V, Ybus=Ybus, S0=S0, I0=I0, Y0=Y0, Vm=Vm, m=m, tau=tau, Cf=Cf, Ct=Ct, F=F, T=T, pq=pq, noslack=pvpq,
-                  Yf=Yf, Yt=Yt, pvr=pvr, k_tau=k_tau, k_m=k_m)
+    g = compute_g(V=V, Ybus=Ybus, S0=S0, I0=I0, Y0=Y0, Vm=Vm, m=m, tau=tau, Cf=Cf, Ct=Ct, F=F, T=T, pq=pq, noslack=noslack,
+                  Yf=Yf, Yt=Yt, pvr=pvr, k_tau=k_tau, k_m=k_m, Sf0=Sf0, St0=St0)
 
     return g
 
@@ -223,6 +285,8 @@ def pf_function2(x: Vec,
                  S0: CxVec,
                  I0: CxVec,
                  Y0: CxVec,
+                 Sf0: CxVec,
+                 St0: CxVec,
                  m0: Vec,
                  tau0: Vec,
                  Cf: CscMat,
@@ -271,15 +335,15 @@ def pf_function2(x: Vec,
     V = Vm * np.exp(1j * Va)
 
     g = compute_g(V=V, Ybus=Ybus, S0=S0, I0=I0, Y0=Y0, Vm=Vm, m=m, tau=tau, Cf=Cf, Ct=Ct, F=F, T=T, pq=pq,
-                  noslack=noslack, pvr=pvr, Yf=Yf, Yt=Yt, k_tau=k_tau, k_m=k_m)
+                  noslack=noslack, pvr=pvr, Yf=Yf, Yt=Yt, k_tau=k_tau, k_m=k_m, Sf0=Sf0, St0=St0)
 
     if compute_jac:
         # Gx = compute_gx(V=V, Ybus=Ybus, pvpq=pvpq, pq=pq)
 
         Gx = calc_autodiff_jacobian(func=compute_gx_autodiff,
                                     x=x,
-                                    arg=(Va0, Vm0, Ybus, Yf, Yt, S0, I0, Y0, m, tau, Cf, Ct, F, T, pq, noslack, pqpvr,
-                                         pvr, k_tau, k_m))
+                                    arg=(Va0, Vm0, Ybus, Yf, Yt, S0, I0, Y0, Sf0, St0, m, tau, Cf, Ct, F, T,
+                                         pq, noslack, pvr, pqpvr, k_tau, k_m))
 
     else:
         Gx = None
@@ -308,6 +372,22 @@ def run_pf(grid: gce.MultiCircuit, pf_options: gce.PowerFlowOptions):
                                       conn=nc.branch_data.conn,
                                       seq=1,
                                       add_windings_phase=False)
+
+    indices = SimulationIndicesV2(
+        bus_types=nc.bus_types,
+        Pbus=nc.Sbus.real,
+        branch_control_bus=nc.branch_data.ctrl_bus,
+        branch_control_branch=nc.branch_data.ctrl_branch,
+        branch_control_mode_m=nc.branch_data.ctrl_mode_m,
+        branch_control_mode_tau=nc.branch_data.ctrl_mode_tau,
+        generator_control_bus=nc.generator_data.ctrl_bus,
+        generator_iscontrolled=nc.generator_data.controllable,
+        F=nc.F,
+        T=nc.T,
+        dc=nc.dc_indices
+    )
+    ref, pq, pv, no_slack = indices.compute_indices(Pbus=nc.Sbus.real, types=nc.bus_types)
+
     Ybus = adm.Ybus
     pq = nc.pq
     pvpq = np.r_[nc.pv, nc.pq]
@@ -322,6 +402,8 @@ def run_pf(grid: gce.MultiCircuit, pf_options: gce.PowerFlowOptions):
     S0 = nc.Sbus
     I0 = nc.Ibus
     Y0 = nc.YLoadBus
+    Sf0 = nc.branch_data.Pfset + 1j*nc.branch_data.Qfset
+    St0 = nc.branch_data.Ptset + 1j * nc.branch_data.Qtset
     m = nc.branch_data.tap_module
     tau = nc.branch_data.tap_angle
     Yf = nc.Yf
@@ -338,7 +420,7 @@ def run_pf(grid: gce.MultiCircuit, pf_options: gce.PowerFlowOptions):
 
     if pf_options.solver_type == SolverType.NR:
         ret: ConvexMethodResult = newton_raphson(func=pf_function2,
-                                                 func_args=(Va0, Vm0, Ybus, Yf, Yt, S0, Y0, I0, m, tau, Cf, Ct, F, T,
+                                                 func_args=(Va0, Vm0, Ybus, Yf, Yt, S0, Y0, I0, Sf0, St0, m, tau, Cf, Ct, F, T,
                                                             pq, pvpq, pvr, pqpvr, k_tau, k_m),
                                                  x0=x0,
                                                  tol=pf_options.tolerance,
@@ -396,9 +478,11 @@ if __name__ == '__main__':
     # fname = os.path.join('..', '..', '..', 'Grids_and_profiles', 'grids', '1951 Bus RTE.xlsx')
     # fname = os.path.join('..', '..', '..', 'Grids_and_profiles', 'grids', "GB Network.gridcal")
     # fname = os.path.join('..', '..', '..', 'Grids_and_profiles', 'grids', "Iwamoto's 11 Bus.xlsx")
-    fname = os.path.join('..', '..', '..', 'Grids_and_profiles', 'grids', "case14.m")
+    # fname = os.path.join('..', '..', '..', 'Grids_and_profiles', 'grids', '5n2g.RAW')
+    # fname = os.path.join('..', '..', '..', 'Grids_and_profiles', 'grids', "case14.m")
     # fname = os.path.join('..', '..', '..', 'Grids_and_profiles', 'grids', "Illinois 200 Bus.gridcal")
-    grid_ = gce.open_file(fname)
+    # grid_ = gce.open_file(fname)
+    grid_ = linn5bus_example()
 
     pf_options_ = gce.PowerFlowOptions(solver_type=gce.SolverType.NR,
                                        max_iter=50,

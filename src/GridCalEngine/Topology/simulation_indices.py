@@ -19,7 +19,8 @@
 import numpy as np
 import numba as nb
 from typing import Union, Tuple, List
-from GridCalEngine.enumerations import TransformerControlType, ConverterControlType, BusMode
+from GridCalEngine.enumerations import (TransformerControlType, ConverterControlType, BusMode,
+                                        TapModuleControl, TapAngleControl)
 from GridCalEngine.basic_structures import Vec, IntVec, BoolVec
 
 
@@ -521,14 +522,14 @@ class SimulationIndicesV2:
     """
     Class to handle the simulation indices
     """
-
+    # TODO: Dudas: El ConverterControlType controla la toma?, TransformerControlType y ConverterControlType están en desuso¿?
     def __init__(self,
                  bus_types: IntVec,
                  Pbus: Vec,
                  branch_control_bus: IntVec,
                  branch_control_branch: IntVec,
-                 branch_control_mode_m: List[Union[TransformerControlType, ConverterControlType]],
-                 branch_control_mode_tau: List[Union[TransformerControlType, ConverterControlType]],
+                 branch_control_mode_m: List[Union[TapModuleControl]],#List[Union[TransformerControlType, ConverterControlType]],
+                 branch_control_mode_tau: List[Union[TapAngleControl]],#List[Union[TransformerControlType, ConverterControlType]],
                  generator_control_bus: IntVec,
                  generator_iscontrolled: BoolVec,
                  F: IntVec,
@@ -552,7 +553,7 @@ class SimulationIndicesV2:
         self.bus_types = bus_types
 
         # master array of branch control types (nbr)
-        self.control_mode = control_mode
+        #self.control_mode = control_mode
 
         # AC and DC indices
         self.ac: IntVec = np.where(dc == 0)[0]
@@ -615,8 +616,52 @@ class SimulationIndicesV2:
         self.vd, self.pq, self.pv, self.no_slack = compile_types(Pbus=Pbus, types=bus_types)
 
         # determine the branch indices
-        self.compile_control_indices(control_mode=control_mode, F=F, T=T)
+        #self.compile_control_indices(control_mode=control_mode, F=F, T=T)
 
+    def compute_indices(self, Pbus: Vec, types: IntVec) -> Tuple[IntVec, IntVec, IntVec, IntVec]:
+        """
+        Compile the types.
+        :param Pbus: array of real power Injections per node used to choose the slack as
+                     the node with greater generation if no slack is provided
+        :param types: array of tentative node types (it may be modified internally)
+        :return: ref, pq, pv, pqpv
+        """
+
+        # check that Sbus is a 1D array
+        assert (len(Pbus.shape) == 1)
+
+        pq = np.where(types == BusMode.PQ.value)[0]
+        pv = np.where(types == BusMode.PV.value)[0]
+        ref = np.where(types == BusMode.Slack.value)[0]
+
+        if len(ref) == 0:  # there is no slack!
+
+            if len(pv) == 0:  # there are no pv neither -> blackout grid
+                pass
+            else:  # select the first PV generator as the slack
+
+                mx = max(Pbus[pv])
+                if mx > 0:
+                    # find the generator that is injecting the most
+                    i = np.where(Pbus == mx)[0][0]
+
+                else:
+                    # all the generators are injecting zero, pick the first pv
+                    i = pv[0]
+
+                # delete the selected pv bus from the pv list and put it in the slack list
+                pv = np.delete(pv, np.where(pv == i)[0])
+                ref = np.array([i])
+
+            for r in ref:
+                types[r] = BusMode.Slack.value
+        else:
+            pass  # no problem :)
+
+        no_slack = np.concatenate((pq, pv))
+        no_slack.sort()
+
+        return ref, pq, pv, no_slack
     def recompile_types(self,
                         bus_types: IntVec,
                         Pbus: Vec):
