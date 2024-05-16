@@ -573,7 +573,7 @@ def run_pf(grid: gce.MultiCircuit, pf_options: gce.PowerFlowOptions):
         T=nc.T,
         dc=nc.dc_indices
     )
-    ref, pq, pv, no_slack = indices.compute_indices(Pbus=nc.Sbus.real,
+    ref, pq, pv, no_slack, pqv, k_m_vr = indices.compute_indices(Pbus=nc.Sbus.real,
                                                     types=nc.bus_types,
                                                     generator_control_bus=nc.generator_data.ctrl_bus,
                                                     generator_buses=nc.generator_data.genbus)
