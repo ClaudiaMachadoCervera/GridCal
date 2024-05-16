@@ -682,6 +682,25 @@ class SimulationIndicesV2:
         no_slack = np.concatenate((pq, pv, pvr))
         no_slack.sort()
 
+        # Let's check if pq nodes have their voltage controlled so that they are converted to pqv
+        for i in pq:
+            if i in generator_control_bus:
+                # add as pqv
+                np.append(pqv, np.array([i]))
+                # delete from pq
+                pq = np.delete(pq, np.where(pq == i)[0])
+            elif i in branch_control_bus:
+                brctrl = np.where(branch_control_bus == i)[0]
+                for j in brctrl:    # in case there are more than one
+                    if branch_control_mode_m[j] == TapModuleControl.Vm:
+                        np.append(pqv, np.array([i]))
+                        pq = np.delete(pq, np.where(pq == i)[0])
+                    else:
+                        # branch is not controlling voltage
+                        pass
+            else:
+                # this is a pq node
+                pass
         # Check feasibility of PVR nodes. PV different to PVR
         # If a bus is controlled by more than one generator or branch, let's keep just one
         idx_i, idxcounts_i = np.unique(generator_control_bus, return_counts=True)   #
@@ -713,7 +732,7 @@ class SimulationIndicesV2:
                             # delete it from pvr
                             pvr = np.delete(pvr, np.where(pvr == g)[0])
                             # converting this node as a pv node
-                            np.append(pv, np.array([g]))
+                            pv = np.append(pv, np.array([g]))
                             # changing generator control bus to itself
                             generator_control_bus[np.where(generator_buses == g)[0]] = g
                             # changing types
@@ -733,7 +752,7 @@ class SimulationIndicesV2:
                         # delete them from pvr
                         pvr = np.delete(pvr, n[1:])
                         # converting these nodes as a pv node
-                        np.append(pv, n)
+                        pv = np.append(pv, n)
                         for g in n:
                             # changing generator control bus to itself
                             generator_control_bus[np.where(generator_buses == g)[0]] = g
@@ -743,13 +762,11 @@ class SimulationIndicesV2:
                         # the only PVR node keeps being PVR node
                         pass
 
-                    print(i)
                 # Let's check if nodecontrolled is a pq node to convert it to pqv
                 if nodecontrolled in pq:
-                    np.append(pqv, np.array([nodecontrolled]))
+                    pv = np.append(pqv, np.array([nodecontrolled]))
                     pq = np.delete(pq, np.where(pq == nodecontrolled)[0])
 
-        # Once PVR defined, check loads (PQ) with V controlled (PQV)
 
         return ref, pq, pv, no_slack, pqv, k_m_vr
     def recompile_types(self,
