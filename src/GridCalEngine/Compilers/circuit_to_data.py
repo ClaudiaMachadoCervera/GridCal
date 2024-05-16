@@ -25,6 +25,8 @@ from GridCalEngine.enumerations import (BusMode, BranchImpedanceMode, ExternalGr
 from GridCalEngine.basic_structures import CxVec
 import GridCalEngine.DataStructures as ds
 
+import numpy as np
+
 if TYPE_CHECKING:  # Only imports the below statements during type checking
     from GridCalEngine.Simulations.OPF.opf_results import OptimalPowerFlowResults
 
@@ -321,9 +323,11 @@ def get_generator_data(circuit: MultiCircuit,
     :return:
     """
     devices = circuit.get_generators()
+    genbus = np.array([circuit.buses.index(x.bus) for x in devices])
 
     data = ds.GeneratorData(nelm=len(devices),
-                            nbus=len(circuit.buses))
+                            nbus=len(circuit.buses),
+                            genbus=genbus)
 
     gen_index_dict: Dict[str, int] = dict()
     for k, elm in enumerate(devices):
@@ -358,6 +362,7 @@ def get_generator_data(circuit: MultiCircuit,
         data.dispatchable[k] = elm.enabled_dispatch
         data.pmax[k] = elm.Pmax
         data.pmin[k] = elm.Pmin
+        data.snom[k] = elm.Snom
 
         if time_series:
 
@@ -418,8 +423,7 @@ def get_generator_data(circuit: MultiCircuit,
                 if elm.is_controlled:
                     ctrl_bus_idx = data.ctrl_bus[k]
                     if bus_data.bus_types[ctrl_bus_idx] != BusMode.Slack.value:  # if it is not Slack
-                        bus_data.bus_types[
-                            ctrl_bus_idx] = BusMode.PV.value if ctrl_bus_idx == i else BusMode.PVR.value  # set as PV
+                        bus_data.bus_types[i] = BusMode.PV.value if ctrl_bus_idx == i else BusMode.PVR.value  # set as PV
 
                     if not use_stored_guess:
                         if Vbus[ctrl_bus_idx].real == 1.0:
@@ -678,6 +682,7 @@ def get_branch_data(circuit: MultiCircuit,
         data.virtual_tap_f[i], data.virtual_tap_t[i] = elm.get_virtual_taps()
 
         data.control_mode[i] = TransformerControlType.fixed
+        data.ctrl_bus[i] = -1
 
         ii += 1
 

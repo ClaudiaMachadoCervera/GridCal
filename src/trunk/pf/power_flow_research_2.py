@@ -34,7 +34,8 @@ from GridCalEngine.Topology.admittance_matrices import compute_passive_admittanc
 from GridCalEngine.Topology.simulation_indices import SimulationIndicesV2
 from GridCalEngine.Utils.Sparse.csc import diags
 
-def linn5bus_example():
+
+def linn5bus_multislack():
     """
     Grid from Lynn Powel's book
     """
@@ -43,12 +44,12 @@ def linn5bus_example():
 
     # Add the buses and the generators and loads attached
     bus1 = gce.Bus('Bus 1', vnom=20)
-    # bus1.is_slack = True  # we may mark the bus a slack
+    bus1.is_slack = True  # we may mark the bus a slack
     grid.add_bus(bus1)
 
     # add a generator to the bus 1
     gen1 = gce.Generator('Slack Generator', vset=1.0, Pmin=0, Pmax=1000,
-                         Qmin=-1000, Qmax=1000, Cost=15, Cost2=0.0)
+                         Qmin=-1000, Qmax=1000, Cost=15, Cost2=0.0, Snom=1000)
 
     grid.add_generator(bus1, gen1)
 
@@ -67,19 +68,98 @@ def linn5bus_example():
     grid.add_bus(bus4)
     grid.add_load(bus4, gce.Load('load 4', P=40, Q=20))
 
-    # add bus 5 with a load attached
+    # bus5
     bus5 = gce.Bus('Bus 5', vnom=20)
     grid.add_bus(bus5)
-    grid.add_load(bus5, gce.Load('load 5', P=50, Q=20))
 
     # add bus 6 with a generator
     bus6 = gce.Bus('Bus 6', vnom=20)
+    bus6.is_slack = True
     grid.add_bus(bus6)
-    gen2 = gce.Generator('Generator 2', vset=1.0, Pmin=0, Pmax=1000,
-                         Qmin=-1000, Qmax=1000, Cost=15, Cost2=0.0)
+
+    # add bus5 with a generator
+    gen3 = gce.Generator('Generator 3', control_bus=bus5, vset=1.0, Pmin=0, Pmax=1000,
+                         Qmin=-1000, Qmax=1000, Cost=15, Cost2=0.0, Snom=400)
+    grid.add_generator(bus5, gen3)
+
+    gen2 = gce.Generator('Generator 2', control_bus=bus5, vset=1.0, Pmin=0, Pmax=1000,
+                         Qmin=-1000, Qmax=1000, Cost=15, Cost2=0.0, Snom=4000)
 
     grid.add_generator(bus6, gen2)
 
+    # TODO: ¿Medidas para saber si es from o to?
+    # add Lines connecting the buses
+    grid.add_line(gce.Line(bus1, bus2, name='line 1-2', r=0.05, x=0.11, b=0.02, rate=1000))
+    grid.add_line(gce.Line(bus1, bus3, name='line 1-3', r=0.05, x=0.11, b=0.02, rate=1000))
+    grid.add_line(gce.Line(bus1, bus5, name='line 1-5', r=0.03, x=0.08, b=0.02, rate=1000))
+    grid.add_line(gce.Line(bus2, bus3, name='line 2-3', r=0.04, x=0.09, b=0.02, rate=1000))
+    grid.add_line(gce.Line(bus2, bus5, name='line 2-5', r=0.04, x=0.09, b=0.02, rate=1000))
+    grid.add_line(gce.Line(bus3, bus4, name='line 3-4', r=0.06, x=0.13, b=0.03, rate=1000))
+    grid.add_line(gce.Line(bus5, bus6, name='line 5-6', r=0.06, x=0.13, b=0.03, rate=1000))
+    grid.add_transformer2w(gce.Transformer2W(bus4, bus5, name='transformer 4-5', r=0.04, x=0.09, b=0.02, rate=1000,
+                                             tap_module_control_mode=gce.TapModuleControl.Vm,
+                                             regulation_bus=bus5
+                                             ))
+
+    return grid
+
+
+def linn5bus_example():
+    """
+    Grid from Lynn Powel's book
+    """
+    # declare a circuit object
+    grid = gce.MultiCircuit()
+
+    # Add the buses and the generators and loads attached
+    bus1 = gce.Bus('Bus 1', vnom=20)
+    # bus1.is_slack = True  # we may mark the bus a slack
+    grid.add_bus(bus1)
+
+    # add a generator to the bus 1
+    gen1 = gce.Generator('Slack Generator', vset=1.0, Pmin=0, Pmax=1000,
+                         Qmin=-1000, Qmax=1000, Cost=15, Cost2=0.0, Snom=1000)
+
+    grid.add_generator(bus1, gen1)
+
+    # add bus 2 with a load attached
+    bus2 = gce.Bus('Bus 2', vnom=20)
+    grid.add_bus(bus2)
+    grid.add_load(bus2, gce.Load('load 2', P=40, Q=20))
+
+    # add bus 3 with a load attached
+    bus3 = gce.Bus('Bus 3', vnom=20)
+    grid.add_bus(bus3)
+    grid.add_load(bus3, gce.Load('load 3', P=25, Q=15))
+
+    # add bus 4 with a load attached
+    bus4 = gce.Bus('Bus 4', vnom=20)
+    grid.add_bus(bus4)
+    grid.add_load(bus4, gce.Load('load 4', P=40, Q=20))
+
+    # bus5
+    bus5 = gce.Bus('Bus 5', vnom=20)
+    grid.add_bus(bus5)
+
+    # add bus 6 with a generator
+    bus6 = gce.Bus('Bus 6', vnom=20)
+    # bus6.is_slack = True
+    grid.add_bus(bus6)
+
+    # add bus 5 with a load attached
+    # grid.add_load(bus5, gce.Load('load 5', P=50, Q=20))
+
+    # add bus5 with a generator
+    gen3 = gce.Generator('Generator 3', control_bus=bus5, vset=1.0, Pmin=0, Pmax=1000,
+                         Qmin=-1000, Qmax=1000, Cost=15, Cost2=0.0, Snom=400)
+    grid.add_generator(bus5, gen3)
+
+    gen2 = gce.Generator('Generator 2', control_bus=bus5, vset=1.0, Pmin=0, Pmax=1000,
+                         Qmin=-1000, Qmax=1000, Cost=15, Cost2=0.0, Snom=400)
+
+    grid.add_generator(bus6, gen2)
+
+    # TODO: ¿Medidas para saber si es from o to?
     # add Lines connecting the buses
     grid.add_line(gce.Line(bus1, bus2, name='line 1-2', r=0.05, x=0.11, b=0.02, rate=1000))
     grid.add_line(gce.Line(bus1, bus3, name='line 1-3', r=0.05, x=0.11, b=0.02, rate=1000))
@@ -94,6 +174,75 @@ def linn5bus_example():
                                              ))
 
     return grid
+
+
+def linn5bus_us():
+    """
+    Grid from Lynn Powel's book
+    """
+    # declare a circuit object
+    grid = gce.MultiCircuit()
+
+    # Add the buses and the generators and loads attached
+    bus1 = gce.Bus('Bus 1', vnom=138)
+    # bus1.is_slack = True  # we may mark the bus a slack
+    grid.add_bus(bus1)
+    grid.add_load(bus1, gce.Load('load 1', P=1000, Q=250))
+
+    # add bus 2 with a load attached
+    bus2 = gce.Bus('Bus 2', vnom=138)
+    grid.add_bus(bus2)
+    grid.add_load(bus2, gce.Load('load 2', P=1000, Q=250))
+    grid.add_shunt(bus2, gce.Shunt('BC 1', B=2.0))
+
+    # add bus 3 with a load attached
+    bus3 = gce.Bus('Bus 3', vnom=138)
+    grid.add_bus(bus3)
+
+    # add bus 4 with a load attached
+    bus4 = gce.Bus('Bus 4', vnom=138)
+    grid.add_bus(bus4)
+    gen1 = gce.Generator('Generator 1', control_bus=bus4, vset=1.0, Pmin=0, Pmax=1000,
+                         Qmin=-1000, Qmax=1000, Cost=15, Cost2=0.0, Snom=1000)
+    grid.add_generator(bus4, gen1)
+
+    # bus5
+    bus5 = gce.Bus('Bus 5', vnom=20)
+    grid.add_bus(bus5)
+    bus5.is_slack = True
+    gen2 = gce.Generator('Generator Slack', control_bus=bus5, vset=1.0, Pmin=0, Pmax=1000,
+                         Qmin=-1000, Qmax=1000, Cost=15, Cost2=0.0, Snom=400)
+    grid.add_generator(bus5, gen2)
+
+    # tr1 = gce.Transformer2W(bus2, bus4, name='transformer 2-4', r=0.001, x=0.01, b=0.0, rate=1000,
+    #                  tap_module_max=1.1, tap_module_min=0.9, tap_module=1.0,
+    #                  tap_module_control_mode=gce.TapModuleControl.Vm,
+    #                  regulation_bus=bus4)
+
+    tr1 = gce.Transformer2W(bus_from=bus2, bus_to=bus4, name='transformer 2-4', r=0.001, x=0.01, b=0.0, rate=1000,
+                            tap_phase_max=1.7, tap_phase_min=1.7, tap_module=1.0,
+                            tap_angle_control_mode=gce.TapAngleControl.Pf, Pset=1200,
+                            regulation_branch=None)
+
+    tr1.tap_changer = gce.TapChanger(total_positions=21, neutral_position=11, dV=0.01)
+
+    tr2 = gce.Transformer2W(bus_from=bus1, bus_to=bus3, name='transformer 1-3', r=0.001, x=0.015, b=0.0, rate=1000,
+                            tap_phase_max=3.0, tap_phase_min=-3.0, tap_module=1.0,
+                            tap_angle_control_mode=gce.TapAngleControl.Pf, Pset=1200,
+                            regulation_branch=None)
+    tr2.tap_changer = gce.TapChanger(total_positions=21, neutral_position=11, dV=0.01)
+
+    # add Lines connecting the buses
+    grid.add_line(gce.Line(bus_from=bus1, bus_to=bus2, name='line 1-2', r=0.01, x=0.01, b=0.02, rate=1000))
+    grid.add_line(gce.Line(bus_from=bus3, bus_to=bus4, name='line 3-4', r=0.005, x=0.02, b=0.02, rate=1000))
+    grid.add_line(gce.Line(bus_from=bus4, bus_to=bus5, name='line 4-5', r=0.005, x=0.02, b=0.02, rate=1000))
+    grid.add_line(gce.Line(bus_from=bus5, bus_to=bus3, name='line 5-3', r=0.005, x=0.01, b=0.02, rate=1000))
+    grid.add_transformer2w(tr1)
+    grid.add_transformer2w(tr2)
+
+    return grid
+
+
 def var2x(Va: Vec, Vm: Vec, tau: Vec, m: Vec) -> Vec:
     """
     Compose the unknowns vector
@@ -163,11 +312,11 @@ def compute_g(V: CxVec,
     dSt_branch = St0 - St_calc
 
     g = np.r_[
-        dS[noslack].real,           # dP
-        dS[np.r_[pq, pvr]].imag,    # dQ
-        dSf_branch[k_m].imag,       # dQf
-        dSt_branch[k_m].imag,       # dQt
-        dSf_branch[k_tau].real      # dPf
+        dS[noslack].real,  # dP
+        dS[np.r_[pq, pvr]].imag,  # dQ
+        dSf_branch[k_m].imag,  # dQf
+        dSt_branch[k_m].imag,  # dQt
+        dSf_branch[k_tau].real  # dPf
     ]  # TODO: falta crear el índice i_m_vr
 
     return g
@@ -264,10 +413,12 @@ def compute_gx_autodiff(x: Vec,
     n_k_m = len(k_m)
     Va = Va0.copy()
     Vm = Vm0.copy()
-    Va[noslack], Vm[pqpvr], tau[k_tau], m[k_m] = x2var(x=x, n_noslack=npvpq, n_pqpvr=n_pqpvr, n_k_tau=n_k_tau, n_k_m=n_k_m)
+    Va[noslack], Vm[pqpvr], tau[k_tau], m[k_m] = x2var(x=x, n_noslack=npvpq, n_pqpvr=n_pqpvr, n_k_tau=n_k_tau,
+                                                       n_k_m=n_k_m)
     V = Vm * np.exp(1j * Va)
 
-    g = compute_g(V=V, Ybus=Ybus, S0=S0, I0=I0, Y0=Y0, Vm=Vm, m=m, tau=tau, Cf=Cf, Ct=Ct, F=F, T=T, pq=pq, noslack=noslack,
+    g = compute_g(V=V, Ybus=Ybus, S0=S0, I0=I0, Y0=Y0, Vm=Vm, m=m, tau=tau, Cf=Cf, Ct=Ct, F=F, T=T, pq=pq,
+                  noslack=noslack,
                   Yf=Yf, Yt=Yt, pvr=pvr, k_tau=k_tau, k_m=k_m, Sf0=Sf0, St0=St0)
 
     return g
@@ -336,7 +487,8 @@ def pf_function2(x: Vec,
 
     g = compute_g(V=V, Ybus=Ybus, S0=S0, I0=I0, Y0=Y0, Vm=Vm, m=m, tau=tau, Cf=Cf, Ct=Ct, F=F, T=T, pq=pq,
                   noslack=noslack, pvr=pvr, Yf=Yf, Yt=Yt, k_tau=k_tau, k_m=k_m, Sf0=Sf0, St0=St0)
-
+    # TODO: Reminder: es posible que a lo largo de las iteraciones cambien los tipos de nudos y haya que actualizar la
+    # prioridad de algún control
     if compute_jac:
         # Gx = compute_gx(V=V, Ybus=Ybus, pvpq=pvpq, pq=pq)
 
@@ -349,6 +501,40 @@ def pf_function2(x: Vec,
         Gx = None
 
     return ConvexFunctionResult(f=g, J=Gx)
+
+
+def indices_computation(grid: gce.MultiCircuit):
+    """
+    :param grid
+    :return:
+    """
+
+    nc = gce.compile_numerical_circuit_at(grid, t_idx=None)
+
+    indices = SimulationIndicesV2(
+        bus_types=nc.bus_types,
+        Pbus=nc.Sbus.real,
+        branch_control_bus=nc.branch_data.ctrl_bus,
+        branch_control_branch=nc.branch_data.ctrl_branch,
+        branch_control_mode_m=nc.branch_data.ctrl_mode_m,
+        branch_control_mode_tau=nc.branch_data.ctrl_mode_tau,
+        generator_control_bus=nc.generator_data.ctrl_bus,
+        generator_iscontrolled=nc.generator_data.controllable,
+        generator_buses=nc.generator_data.genbus,
+        F=nc.F,
+        T=nc.T,
+        dc=nc.dc_indices
+    )
+    ref, pq, pv, no_slack = indices.compute_indices(Pbus=nc.Sbus.real,
+                                                    types=nc.bus_types,
+                                                    generator_control_bus=nc.generator_data.ctrl_bus,
+                                                    generator_buses=nc.generator_data.genbus,
+                                                    branch_control_bus=nc.branch_data.ctrl_bus,
+                                                    branch_control_branch=nc.branch_data.ctrl_branch,
+                                                    Snomgen=nc.generator_data.snom,
+                                                    branch_control_mode_m=nc.branch_data.ctrl_mode_m)
+
+    return ref, pq, pv, no_slack
 
 
 def run_pf(grid: gce.MultiCircuit, pf_options: gce.PowerFlowOptions):
@@ -382,11 +568,15 @@ def run_pf(grid: gce.MultiCircuit, pf_options: gce.PowerFlowOptions):
         branch_control_mode_tau=nc.branch_data.ctrl_mode_tau,
         generator_control_bus=nc.generator_data.ctrl_bus,
         generator_iscontrolled=nc.generator_data.controllable,
+        generator_buses=nc.generator_data.genbus,
         F=nc.F,
         T=nc.T,
         dc=nc.dc_indices
     )
-    ref, pq, pv, no_slack = indices.compute_indices(Pbus=nc.Sbus.real, types=nc.bus_types)
+    ref, pq, pv, no_slack = indices.compute_indices(Pbus=nc.Sbus.real,
+                                                    types=nc.bus_types,
+                                                    generator_control_bus=nc.generator_data.ctrl_bus,
+                                                    generator_buses=nc.generator_data.genbus)
 
     Ybus = adm.Ybus
     pq = nc.pq
@@ -402,7 +592,7 @@ def run_pf(grid: gce.MultiCircuit, pf_options: gce.PowerFlowOptions):
     S0 = nc.Sbus
     I0 = nc.Ibus
     Y0 = nc.YLoadBus
-    Sf0 = nc.branch_data.Pfset + 1j*nc.branch_data.Qfset
+    Sf0 = nc.branch_data.Pfset + 1j * nc.branch_data.Qfset
     St0 = nc.branch_data.Ptset + 1j * nc.branch_data.Qtset
     m = nc.branch_data.tap_module
     tau = nc.branch_data.tap_angle
@@ -420,8 +610,9 @@ def run_pf(grid: gce.MultiCircuit, pf_options: gce.PowerFlowOptions):
 
     if pf_options.solver_type == SolverType.NR:
         ret: ConvexMethodResult = newton_raphson(func=pf_function2,
-                                                 func_args=(Va0, Vm0, Ybus, Yf, Yt, S0, Y0, I0, Sf0, St0, m, tau, Cf, Ct, F, T,
-                                                            pq, pvpq, pvr, pqpvr, k_tau, k_m),
+                                                 func_args=(
+                                                 Va0, Vm0, Ybus, Yf, Yt, S0, Y0, I0, Sf0, St0, m, tau, Cf, Ct, F, T,
+                                                 pq, pvpq, pvr, pqpvr, k_tau, k_m),
                                                  x0=x0,
                                                  tol=pf_options.tolerance,
                                                  max_iter=pf_options.max_iter,
@@ -454,7 +645,8 @@ def run_pf(grid: gce.MultiCircuit, pf_options: gce.PowerFlowOptions):
 
     Va = Va0.copy()
     Vm = Vm0.copy()
-    Va[pvpq], Vm[pqpvr], tau[k_tau], m[k_m] = x2var(x=ret.x, n_noslack=npvpq, n_pqpvr=npqpvr, n_k_tau=n_k_tau, n_k_m=n_k_m)
+    Va[pvpq], Vm[pqpvr], tau[k_tau], m[k_m] = x2var(x=ret.x, n_noslack=npvpq, n_pqpvr=npqpvr, n_k_tau=n_k_tau,
+                                                    n_k_m=n_k_m)
 
     df = pd.DataFrame(data={"Vm": Vm, "Va": Va})
     print(df)
@@ -467,6 +659,24 @@ def run_pf(grid: gce.MultiCircuit, pf_options: gce.PowerFlowOptions):
     ret.plot_error()
 
     plt.show()
+
+
+def test_multiple_slack() -> None:
+    gridtest_ = linn5bus_multislack()
+
+    ref, pq, pv, no_slack = indices_computation(grid=gridtest_)
+
+    # check that it exists only one slack node
+    assert (len(ref) == 1)
+
+    # check that slack node is the one with higher nominal power
+    candidate = gridtest_.generators[0]
+    for g in gridtest_.generators:
+        if g.Snom > candidate.Snom:
+            candidate = g
+    # TODO: hay que cambiar esto en otro punto diferente al del compute_indices
+    # assert (candidate.bus == gridtest_.buses[ref[0]])
+
 
 
 if __name__ == '__main__':

@@ -20,6 +20,7 @@ import pandas as pd
 from typing import Union
 from matplotlib import pyplot as plt
 from GridCalEngine.basic_structures import Logger
+from GridCalEngine.Devices.Substation.bus import Bus
 from GridCalEngine.enumerations import DeviceType, BuildStatus, SubObjectType
 from GridCalEngine.Devices.Aggregation.technology import Technology
 from GridCalEngine.Devices.Parents.generator_parent import GeneratorParent
@@ -37,6 +38,7 @@ class Generator(GeneratorParent):
                  power_factor: float = 0.8,
                  vset: float = 1.0,
                  is_controlled=True,
+                 control_bus: Bus = None,
                  Qmin: float = -9999,
                  Qmax: float = 9999,
                  Snom: float = 9999,
@@ -102,7 +104,7 @@ class Generator(GeneratorParent):
                                  code=code,
                                  bus=None,
                                  cn=None,
-                                 control_bus=None,
+                                 control_bus=control_bus,
                                  control_cn=None,
                                  active=active,
                                  P=P,

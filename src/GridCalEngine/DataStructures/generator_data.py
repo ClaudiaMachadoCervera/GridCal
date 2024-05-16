@@ -25,7 +25,7 @@ class GeneratorData:
     GeneratorData
     """
 
-    def __init__(self, nelm: int, nbus: int):
+    def __init__(self, nelm: int, nbus: int, genbus: IntVec = None):
         """
         Generator data arrays
         :param nelm: number of generator
@@ -33,6 +33,7 @@ class GeneratorData:
         """
         self.nelm: int = nelm
         self.nbus: int = nbus
+        self.genbus: IntVec = genbus
         self.names: StrVec = np.empty(nelm, dtype=object)
         self.idtag: StrVec = np.empty(nelm, dtype=object)
 
@@ -66,6 +67,7 @@ class GeneratorData:
         self.dispatchable: BoolVec = np.zeros(nelm, dtype=bool)
         self.pmax: Vec = np.zeros(nelm, dtype=float)
         self.pmin: Vec = np.zeros(nelm, dtype=float)
+        self.snom: Vec = np.zeros(nelm, dtype=float)
 
         self.cost_1: Vec = np.zeros(nelm, dtype=float)
         self.cost_0: Vec = np.zeros(nelm, dtype=float)
@@ -79,7 +81,7 @@ class GeneratorData:
 
         self.original_idx = np.zeros(nelm, dtype=int)
 
-    def slice(self, elm_idx: IntVec, bus_idx: IntVec):
+    def slice(self, elm_idx: IntVec, bus_idx: IntVec, genbus: IntVec = None):
         """
         Slice generator data by given indices
         :param elm_idx: array of element indices
@@ -88,7 +90,8 @@ class GeneratorData:
         """
 
         data = GeneratorData(nelm=len(elm_idx),
-                             nbus=len(bus_idx))
+                             nbus=len(bus_idx),
+                             genbus=genbus)
 
         data.names = self.names[elm_idx]
         data.idtag = self.idtag[elm_idx]
@@ -120,6 +123,7 @@ class GeneratorData:
         data.dispatchable = self.dispatchable[elm_idx]
         data.pmax = self.pmax[elm_idx]
         data.pmin = self.pmin[elm_idx]
+        data.snom = self.snom[elm_idx]
 
         data.cost_0 = self.cost_0[elm_idx]
         data.cost_1 = self.cost_1[elm_idx]
@@ -154,7 +158,7 @@ class GeneratorData:
         :return: new GeneratorData instance
         """
 
-        data = GeneratorData(nelm=self.nelm, nbus=self.nbus)
+        data = GeneratorData(nelm=self.nelm, nbus=self.nbus, genbus=self.genbus)
 
         data.names = self.names.copy()
         data.idtag = self.idtag.copy()
@@ -187,6 +191,7 @@ class GeneratorData:
         data.dispatchable = self.dispatchable.copy()
         data.pmax = self.pmax.copy()
         data.pmin = self.pmin.copy()
+        data.snom = self.snom.copy()
 
         data.cost_0 = self.cost_0.copy()
         data.cost_1 = self.cost_1.copy()

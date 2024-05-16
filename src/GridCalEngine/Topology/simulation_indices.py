@@ -24,6 +24,7 @@ from GridCalEngine.enumerations import (TransformerControlType, ConverterControl
 from GridCalEngine.basic_structures import Vec, IntVec, BoolVec
 
 
+
 @nb.njit(cache=True)
 def compile_types(Pbus: Vec, types: IntVec) -> Tuple[IntVec, IntVec, IntVec, IntVec]:
     """
@@ -532,6 +533,7 @@ class SimulationIndicesV2:
                  branch_control_mode_tau: List[Union[TapAngleControl]],#List[Union[TransformerControlType, ConverterControlType]],
                  generator_control_bus: IntVec,
                  generator_iscontrolled: BoolVec,
+                 generator_buses: IntVec,
                  F: IntVec,
                  T: IntVec,
                  dc: IntVec):
@@ -549,6 +551,7 @@ class SimulationIndicesV2:
         :param T: Nbranch
         :param dc: Nbranch
         """
+
         # master aray of bus types (nbus)
         self.bus_types = bus_types
 
@@ -618,7 +621,15 @@ class SimulationIndicesV2:
         # determine the branch indices
         #self.compile_control_indices(control_mode=control_mode, F=F, T=T)
 
-    def compute_indices(self, Pbus: Vec, types: IntVec) -> Tuple[IntVec, IntVec, IntVec, IntVec]:
+    def compute_indices(self,
+                        Pbus: Vec,
+                        types: IntVec,
+                        generator_control_bus: IntVec,
+                        generator_buses: IntVec,
+                        branch_control_bus: IntVec,
+                        branch_control_branch: IntVec,
+                        Snomgen: Vec,
+                        branch_control_mode_m: List[Union[TapModuleControl]]) -> Tuple[IntVec, IntVec, IntVec, IntVec, IntVec, IntVec]:
         """
         Compile the types.
         :param Pbus: array of real power Injections per node used to choose the slack as
@@ -632,34 +643,100 @@ class SimulationIndicesV2:
 
         pq = np.where(types == BusMode.PQ.value)[0]
         pv = np.where(types == BusMode.PV.value)[0]
+        pvr = np.where(types == BusMode.PVR.value)[0]
         ref = np.where(types == BusMode.Slack.value)[0]
-
+        no_slack = pq + pv + pvr
+        k_m_vr = np.where(branch_control_mode_m == TapModuleControl.Vm)[0]
+        pqv = np.zeros(0, dtype=int)
+        # TODO: hay que actualizar el types cada vez que se cambie un nudo
+        # TODO: hay que chequear si se cumplen los límites de control
+        # checking the slack information consistency
         if len(ref) == 0:  # there is no slack!
-
-            if len(pv) == 0:  # there are no pv neither -> blackout grid
+            if len(np.concatenate((pv, pvr))) == 0:  # there are no pv neither -> blackout grid
+                print("Blackout grid: no slack neither pv or pvr nodes")
                 pass
-            else:  # select the first PV generator as the slack
-
-                mx = max(Pbus[pv])
-                if mx > 0:
-                    # find the generator that is injecting the most
-                    i = np.where(Pbus == mx)[0][0]
-
-                else:
-                    # all the generators are injecting zero, pick the first pv
-                    i = pv[0]
-
-                # delete the selected pv bus from the pv list and put it in the slack list
-                pv = np.delete(pv, np.where(pv == i)[0])
-                ref = np.array([i])
-
+            else:  # select the PV with higher rate power as slack
+                i = generator_buses[np.where(Snomgen == max(Snomgen))]
+                if i in pv:
+                    pv = np.delete(pv, np.where(pv == i)[0])
+                    ref = np.array([i])
+                elif i in pvr:
+                    pvr = np.delete(pvr, np.where(pvr == i)[0])
+                    ref = np.array([i])
             for r in ref:
                 types[r] = BusMode.Slack.value
+
+        if len(ref) > 1:    # there are more than one slacks!
+            maxpos = list()
+            for r in ref:
+                maxpos.append(np.where(generator_buses == r))
+            mx = max(Snomgen[maxpos])
+            i = ref[np.where(max(Snomgen[maxpos]) == mx)]
+
+            # delete the rest of generators from ref and put them in the pv list
+            newpv = np.delete(ref, np.where(ref == i)[0])
+            pv = np.concatenate([pv, newpv])
+            ref = np.array([i])
         else:
             pass  # no problem :)
 
-        no_slack = np.concatenate((pq, pv))
+        no_slack = np.concatenate((pq, pv, pvr))
         no_slack.sort()
+
+        # Check feasibility of PVR nodes. PV different to PVR
+        # If a bus is controlled by more than one generator or branch, let's keep just one
+        idx_i, idxcounts_i = np.unique(generator_control_bus, return_counts=True)   #
+        idx_k, idxcounts_k = np.unique(branch_control_bus, return_counts=True)
+        idx = np.unique(np.concatenate([idx_i, idx_k]))
+        idxcounts = np.zeros(idx.shape[0], dtype=float)
+        for t, i in enumerate(idx):
+            appears_gen = idxcounts_i[np.where(idx_i == i)] if i in idx_i else np.array([0])
+            appears_br = idxcounts_k[np.where(idx_k == i)] if i in idx_k else np.array([0])
+            idxcounts[t] = appears_gen + appears_br
+
+        if np.any(idxcounts > 1):
+            # let's find those nodes controlled by more than one element
+            for i in np.where(idxcounts > 1)[0]:
+                nodecontrolled = idx[i]
+                if nodecontrolled == -1:
+                    continue   # No control
+                generatorsconflict = generator_buses[np.where(generator_control_bus == nodecontrolled)[0]]
+                branchesconflict = np.where(branch_control_bus == nodecontrolled)[0]
+                # At this point it is known which generators and/or branches are controlling the same node
+                # First, let's check if there is a generator connected to this node and controlling it
+                if nodecontrolled in pv:
+                    # imposing its own node and disabling the rest
+                    generatorsconflict = np.delete(generatorsconflict,
+                                                   np.where(generatorsconflict == nodecontrolled)[0])
+                    # converting the rest of pvr nodes to pv nodes
+                    if pvr.shape[0] > 0:
+                        for g in generatorsconflict:
+                            # delete it from pvr
+                            pvr = np.delete(pvr, np.where(pvr == g)[0])
+                            # converting this node as a pv node
+                            np.append(pv, np.array([g]))
+                            # changing generator control bus to itself
+                            generator_control_bus[np.where(generator_buses == g)[0]] = g
+                            # changing types
+                            types[g] = BusMode.PV.value
+                    # disabling transformer voltage control in case there are any
+                    if k_m_vr.shape[0] > 0:
+                        for b in branchesconflict:
+                            # delete it from k_m_vr
+                            k_m_vr = np.delete(k_m_vr, np.where(k_m_vr == b)[0])
+                            branch_control_mode_m[b] = TapModuleControl.fixed
+                # In case node is controlled just by pvr nodes or transformers
+                elif nodecontrolled in generator_control_bus:
+                    # let's select the first pvr node
+                    n = generator_buses[np.where(generator_control_bus == nodecontrolled)[0]]
+                    print(i)
+
+                # Let's check if nodecontrolled is a pq node to convert it to pqv
+                if nodecontrolled in pq:
+                    np.append(pqv, np.array([nodecontrolled]))
+                    pq = np.delete(pq, np.where(pq == nodecontrolled)[0])
+
+        # Once PVR defined, check loads (PQ) with V controlled (PQV)
 
         return ref, pq, pv, no_slack
     def recompile_types(self,
