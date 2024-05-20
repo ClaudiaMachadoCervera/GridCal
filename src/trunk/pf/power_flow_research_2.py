@@ -89,17 +89,32 @@ def linn5bus_multislack():
 
     # TODO: ¿Medidas para saber si es from o to?
     # add Lines connecting the buses
-    grid.add_line(gce.Line(bus1, bus2, name='line 1-2', r=0.05, x=0.11, b=0.02, rate=1000))
-    grid.add_line(gce.Line(bus1, bus3, name='line 1-3', r=0.05, x=0.11, b=0.02, rate=1000))
-    grid.add_line(gce.Line(bus1, bus5, name='line 1-5', r=0.03, x=0.08, b=0.02, rate=1000))
-    grid.add_line(gce.Line(bus2, bus3, name='line 2-3', r=0.04, x=0.09, b=0.02, rate=1000))
-    grid.add_line(gce.Line(bus2, bus5, name='line 2-5', r=0.04, x=0.09, b=0.02, rate=1000))
-    grid.add_line(gce.Line(bus3, bus4, name='line 3-4', r=0.06, x=0.13, b=0.03, rate=1000))
-    grid.add_line(gce.Line(bus5, bus6, name='line 5-6', r=0.06, x=0.13, b=0.03, rate=1000))
+    line_1_2 = gce.Line(bus1, bus2, name='line 1-2', r=0.05, x=0.11, b=0.02, rate=1000)
+    grid.add_line(line_1_2)
+    line_1_3 = gce.Line(bus1, bus3, name='line 1-3', r=0.05, x=0.11, b=0.02, rate=1000)
+    grid.add_line(line_1_3)
+    line_1_5 = gce.Line(bus1, bus5, name='line 1-5', r=0.03, x=0.08, b=0.02, rate=1000)
+    grid.add_line(line_1_5)
+    line_2_3 = gce.Line(bus2, bus3, name='line 2-3', r=0.04, x=0.09, b=0.02, rate=1000)
+    grid.add_line(line_2_3)
+    line_2_5 = gce.Line(bus2, bus5, name='line 2-5', r=0.04, x=0.09, b=0.02, rate=1000)
+    grid.add_line(line_2_5)
+    line_3_4 = gce.Line(bus3, bus4, name='line 3-4', r=0.06, x=0.13, b=0.03, rate=1000)
+    grid.add_line(line_3_4)
+    line_5_6 = gce.Line(bus5, bus6, name='line 5-6', r=0.06, x=0.13, b=0.03, rate=1000)
+    grid.add_line(line_5_6)
     grid.add_transformer2w(gce.Transformer2W(bus4, bus5, name='transformer 4-5', r=0.04, x=0.09, b=0.02, rate=1000,
                                              tap_module_control_mode=gce.TapModuleControl.Vm,
-                                             regulation_bus=bus5
+                                             regulation_bus=bus3
                                              ))
+    #grid.add_transformer2w(gce.Transformer2W(bus4, bus5, name='transformer 4-5', r=0.04, x=0.09, b=0.02, rate=1000,
+    #                                         tap_module_control_mode=gce.TapModuleControl.Qt,
+    #                                         regulation_branch=line_5_6
+    #                                         ))
+    #grid.add_transformer2w(gce.Transformer2W(bus4, bus5, name='transformer 4-5', r=0.04, x=0.09, b=0.02, rate=1000,
+    #                                         tap_angle_control_mode=gce.TapAngleControl.Pt,
+    #                                         regulation_branch=line_5_6
+    #                                         ))
 
     return grid
 
@@ -525,16 +540,18 @@ def indices_computation(grid: gce.MultiCircuit):
         T=nc.T,
         dc=nc.dc_indices
     )
-    ref, pq, pv, no_slack, pqv, k_m_vr = indices.compute_indices(Pbus=nc.Sbus.real,
+    ref, pq, pv, pvr, no_slack, pqv, k_m_vr, k_m_qf, k_m_qt, k_tau_pf, k_tau_pt = indices.compute_indices(
+                                                    Pbus=nc.Sbus.real,
                                                     types=nc.bus_types,
                                                     generator_control_bus=nc.generator_data.ctrl_bus,
                                                     generator_buses=nc.generator_data.genbus,
                                                     branch_control_bus=nc.branch_data.ctrl_bus,
                                                     branch_control_branch=nc.branch_data.ctrl_branch,
                                                     Snomgen=nc.generator_data.snom,
-                                                    branch_control_mode_m=nc.branch_data.ctrl_mode_m)
+                                                    branch_control_mode_m=nc.branch_data.ctrl_mode_m,
+                                                    branch_control_mode_tau=nc.branch_data.ctrl_mode_tau)
 
-    return ref, pq, pv, no_slack, pqv, k_m_vr
+    return ref, pq, pv, pvr, no_slack, pqv, k_m_vr, k_m_qf, k_m_qt, k_tau_pf, k_tau_pt
 
 
 def run_pf(grid: gce.MultiCircuit, pf_options: gce.PowerFlowOptions):
@@ -573,7 +590,7 @@ def run_pf(grid: gce.MultiCircuit, pf_options: gce.PowerFlowOptions):
         T=nc.T,
         dc=nc.dc_indices
     )
-    ref, pq, pv, no_slack, pqv, k_m_vr = indices.compute_indices(Pbus=nc.Sbus.real,
+    ref, pq, pv, pvr, no_slack, pqv, k_m_vr = indices.compute_indices(Pbus=nc.Sbus.real,
                                                     types=nc.bus_types,
                                                     generator_control_bus=nc.generator_data.ctrl_bus,
                                                     generator_buses=nc.generator_data.genbus)
@@ -664,7 +681,7 @@ def run_pf(grid: gce.MultiCircuit, pf_options: gce.PowerFlowOptions):
 def test_multiple_slack() -> None:
     gridtest_ = linn5bus_multislack()
 
-    ref, pq, pv, no_slack, pqv, k_m_vr = indices_computation(grid=gridtest_)
+    ref, pq, pv, pvr, no_slack, pqv, k_m_vr, k_m_qf, k_m_qt, k_tau_pf, k_tau_pt = indices_computation(grid=gridtest_)
 
     # check that it exists only one slack node
     assert (len(ref) == 1)

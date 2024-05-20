@@ -629,7 +629,9 @@ class SimulationIndicesV2:
                         branch_control_bus: IntVec,
                         branch_control_branch: IntVec,
                         Snomgen: Vec,
-                        branch_control_mode_m: List[Union[TapModuleControl]]) -> Tuple[IntVec, IntVec, IntVec, IntVec, IntVec, IntVec]:
+                        branch_control_mode_m: List[Union[TapModuleControl]],
+                        branch_control_mode_tau: List[Union[TapAngleControl]]) -> Tuple[IntVec, IntVec, IntVec, IntVec,
+                                                                                        IntVec, IntVec, IntVec]:
         """
         Compile the types.
         :param Pbus: array of real power Injections per node used to choose the slack as
@@ -646,6 +648,10 @@ class SimulationIndicesV2:
         pvr = np.where(types == BusMode.PVR.value)[0]
         ref = np.where(types == BusMode.Slack.value)[0]
         k_m_vr = np.where(branch_control_mode_m == TapModuleControl.Vm)[0]
+        k_m_Qf = np.where(branch_control_mode_m == TapModuleControl.Qf)[0]
+        k_m_Qt = np.where(branch_control_mode_m == TapModuleControl.Qt)[0]
+        k_tau_Pf = np.where(branch_control_mode_tau == TapAngleControl.Pf)[0]
+        k_tau_Pt = np.where(branch_control_mode_tau == TapAngleControl.Pt)[0]
         pqv = np.zeros(0, dtype=int)
         # TODO: hay que actualizar el types cada vez que se cambie un nudo
         # TODO: hay que chequear si se cumplen los límites de control
@@ -686,14 +692,14 @@ class SimulationIndicesV2:
         for i in pq:
             if i in generator_control_bus:
                 # add as pqv
-                np.append(pqv, np.array([i]))
+                pqv = np.append(pqv, np.array([i]))
                 # delete from pq
                 pq = np.delete(pq, np.where(pq == i)[0])
             elif i in branch_control_bus:
                 brctrl = np.where(branch_control_bus == i)[0]
                 for j in brctrl:    # in case there are more than one
                     if branch_control_mode_m[j] == TapModuleControl.Vm:
-                        np.append(pqv, np.array([i]))
+                        pqv = np.append(pqv, np.array([i]))
                         pq = np.delete(pq, np.where(pq == i)[0])
                     else:
                         # branch is not controlling voltage
@@ -701,6 +707,7 @@ class SimulationIndicesV2:
             else:
                 # this is a pq node
                 pass
+
         # Check feasibility of PVR nodes. PV different to PVR
         # If a bus is controlled by more than one generator or branch, let's keep just one
         idx_i, idxcounts_i = np.unique(generator_control_bus, return_counts=True)   #
@@ -743,7 +750,8 @@ class SimulationIndicesV2:
                             # delete it from k_m_vr
                             k_m_vr = np.delete(k_m_vr, np.where(k_m_vr == b)[0])
                             branch_control_mode_m[b] = TapModuleControl.fixed
-                # In case node is controlled just by pvr nodes or transformers
+                            # TODO: qué hacemos con el nudo to del transformador?
+                # In case node is controlled just by pvr nodes
                 elif nodecontrolled in generator_control_bus:
                     # let's select the first pvr node
                     n = generator_buses[np.where(generator_control_bus == nodecontrolled)[0]]
@@ -761,14 +769,25 @@ class SimulationIndicesV2:
                     else:
                         # the only PVR node keeps being PVR node
                         pass
+                    # disabling transformer voltage control in case there are any
+                    if k_m_vr.shape[0] > 0:
+                        for b in branchesconflict:
+                            # delete it from k_m_vr
+                            k_m_vr = np.delete(k_m_vr, np.where(k_m_vr == b)[0])
+                            branch_control_mode_m[b] = TapModuleControl.fixed
+                            # TODO: qué hacemos con el nudo to del transformador?
+                elif nodecontrolled in branch_control_bus:
+                    # any node whose voltage is controlled by a transformer tap is pqv node
+                     if nodecontrolled not in pqv:
+                         pqv = np.append(pqv, np.array([nodecontrolled]))
 
                 # Let's check if nodecontrolled is a pq node to convert it to pqv
                 if nodecontrolled in pq:
-                    pv = np.append(pqv, np.array([nodecontrolled]))
+                    pqv = np.append(pqv, np.array([nodecontrolled]))
                     pq = np.delete(pq, np.where(pq == nodecontrolled)[0])
 
 
-        return ref, pq, pv, no_slack, pqv, k_m_vr
+        return ref, pq, pv, pvr, no_slack, pqv, k_m_vr, k_m_Qf, k_m_Qt, k_tau_Pf, k_tau_Pt
     def recompile_types(self,
                         bus_types: IntVec,
                         Pbus: Vec):
