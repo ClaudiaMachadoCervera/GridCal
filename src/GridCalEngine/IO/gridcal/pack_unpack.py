@@ -1028,8 +1028,7 @@ def parse_object_type_from_json(template_elm: ALL_DEV_TYPES,
 
         # for property_name_, property_value in json_entry.items():
         for property_name, gc_prop in template_elm.registered_properties.items():
-            print("property: {}".format(property_name))
-            #if property_value is not None: print("value: {}".format(property_value))
+            #print("property: {}".format(property_name))
             # search for the property in the json
             property_value = searc_property_into_json(json_entry=json_entry, prop=gc_prop)
             #print(property_name, property_value)
@@ -1396,9 +1395,7 @@ def parse_gridcal_data(data: Dict[str, Union[str, float, pd.DataFrame, Dict[str,
             item_count = 0
             n_data_types = len(template_object_types)
             for object_type_key, template_elm in template_object_types.items():
-                print("-------------------{}---------------------".format(template_elm))
-                if template_elm.device_type.name == 'LineDevice':
-                    print("--------------------------------LINE-----------------------------")
+                #print("-------------------{}---------------------".format(template_elm))
                 if text_func is not None:
                     text_func(f"Parsing {object_type_key} model data...")
 
